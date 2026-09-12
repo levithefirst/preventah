@@ -43,6 +43,28 @@ async function api(path: string, init?: RequestInit): Promise<ApiResult> {
   }
 }
 
+/**
+ * TEMPORARY DIAGNOSTIC - remove once the Nimiq Pay sign-in failure is
+ * understood. Emits a safe step marker with a correlation id.
+ *
+ * Never carries the signature, the nonce, the signed message, the wallet
+ * address, cookies or any health data - only a step name, a random id and
+ * elapsed milliseconds.
+ *
+ * These run in the WebView, so they are lost if the WebView itself dies.
+ * The durable half of this trace is the pair of server-side markers logged
+ * by /api/auth/nonce and /api/auth/verify.
+ */
+function authStep(step: string, requestId: string, startedAt: number): void {
+  try {
+    console.info(
+      `AUTH_STEP=${step} requestId=${requestId} elapsedMs=${Date.now() - startedAt}`,
+    );
+  } catch {
+    // Logging must never break the flow it is observing.
+  }
+}
+
 /** How long to keep polling a pending stake before telling the user to wait. */
 const VERIFY_POLL_MS = 5000;
 const VERIFY_MAX_ATTEMPTS = 24;
@@ -169,10 +191,20 @@ export default function App() {
   const connect = useCallback(async () => {
     setBusy('connect');
     setError(null);
-    try {
-      const address = await connectEvmAccount();
 
-      const challenge = await api('/api/auth/nonce', { method: 'POST' });
+    // TEMPORARY DIAGNOSTIC - correlation id for this sign-in attempt.
+    const requestId = Math.random().toString(16).slice(2, 10);
+    const startedAt = Date.now();
+
+    try {
+      authStep('before_request_accounts', requestId, startedAt);
+      const address = await connectEvmAccount();
+      authStep('after_request_accounts', requestId, startedAt);
+
+      const challenge = await api('/api/auth/nonce', {
+        method: 'POST',
+        body: JSON.stringify({ requestId }),
+      });
       if (!challenge.ok) {
         setError(challenge.error ?? 'Could not start the login.');
         return;
@@ -182,20 +214,26 @@ export default function App() {
         nonce: string;
         message: string;
       };
+
+      authStep('before_personal_sign', requestId, startedAt);
       const signature = await signLoginMessage(address, message);
+      authStep('after_personal_sign', requestId, startedAt);
 
       const verified = await api('/api/auth/verify', {
         method: 'POST',
-        body: JSON.stringify({ address, signature, nonce }),
+        body: JSON.stringify({ address, signature, nonce, requestId }),
       });
       if (!verified.ok) {
         setError(verified.error ?? 'Could not verify your wallet.');
         return;
       }
+      authStep('after_auth_verify', requestId, startedAt);
 
       const me = await api('/api/me');
       if (apply(me)) setPhase('ready');
+      authStep('after_session_loaded', requestId, startedAt);
     } catch (err) {
+      authStep('caught_error', requestId, startedAt);
       handleWalletError(err);
     } finally {
       setBusy(null);

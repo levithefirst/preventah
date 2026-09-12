@@ -14,11 +14,24 @@ export const dynamic = 'force-dynamic';
  * RETURNING), so a captured signature cannot be replayed.
  */
 export async function POST(request: Request) {
+  // TEMPORARY DIAGNOSTIC - opaque correlation id only.
+  let requestId = 'unknown';
+
   try {
     const body = await readJson(request);
     const address = String(body.address ?? '');
     const signature = String(body.signature ?? '');
     const nonce = String(body.nonce ?? '');
+
+    if (
+      typeof body.requestId === 'string' &&
+      /^[a-f0-9]{1,16}$/.test(body.requestId)
+    ) {
+      requestId = body.requestId;
+    }
+    // Reaching here proves the WebView survived personal_sign and delivered
+    // the result. Nothing about the signature itself is logged.
+    console.info(`AUTH_STEP=verify_received requestId=${requestId}`);
 
     if (!isAddress(address)) return fail('Invalid wallet address.');
     if (!/^0x[0-9a-fA-F]+$/.test(signature)) return fail('Invalid signature.');
@@ -46,8 +59,11 @@ export async function POST(request: Request) {
     await getOrCreateUser(address);
     await setSessionCookie(address);
 
+    console.info(`AUTH_STEP=after_auth_verify requestId=${requestId}`);
+
     return ok({ address: address.toLowerCase() });
   } catch (error) {
+    console.info(`AUTH_STEP=verify_failed requestId=${requestId}`);
     return serverError('auth/verify', error);
   }
 }
