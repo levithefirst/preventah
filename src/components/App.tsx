@@ -1,0 +1,390 @@
+'use client';
+
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { toBaseUnits } from '@/lib/config';
+import type { ConditionKey } from '@/lib/conditions';
+import type { AppState } from '@/lib/state';
+import {
+  WalletError,
+  connectEvmAccount,
+  detectHost,
+  sendUsdtStake,
+  signLoginMessage,
+  type HostInfo,
+} from '@/lib/wallet';
+import Masthead from './Masthead';
+import ConsentCard from './ConsentCard';
+import ConditionsCard from './ConditionsCard';
+import PlanCard from './PlanCard';
+import CommitmentCard from './CommitmentCard';
+import HistoryCard from './HistoryCard';
+
+type Phase = 'booting' | 'connect' | 'ready';
+
+interface ApiResult {
+  ok: boolean;
+  error?: string;
+  state?: AppState;
+  pending?: boolean;
+  alreadyCheckedIn?: boolean;
+}
+
+async function api(path: string, init?: RequestInit): Promise<ApiResult> {
+  const response = await fetch(path, {
+    ...init,
+    headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) },
+  });
+  try {
+    return (await response.json()) as ApiResult;
+  } catch {
+    return { ok: false, error: 'The server sent an unreadable response.' };
+  }
+}
+
+/** How long to keep polling a pending stake before telling the user to wait. */
+const VERIFY_POLL_MS = 5000;
+const VERIFY_MAX_ATTEMPTS = 24;
+
+export default function App() {
+  const [phase, setPhase] = useState<Phase>('booting');
+  const [host, setHost] = useState<HostInfo | null>(null);
+  const [state, setState] = useState<AppState | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [flash, setFlash] = useState<string | null>(null);
+
+  const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollAttempts = useRef(0);
+
+  // --- boot ---------------------------------------------------------------
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      const info = await detectHost();
+      if (cancelled) return;
+      setHost(info);
+
+      // An existing session cookie means the wallet was already proved.
+      const result = await api('/api/me');
+      if (cancelled) return;
+
+      if (result.ok && result.state) {
+        setState(result.state);
+        setPhase('ready');
+      } else {
+        setPhase('connect');
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // --- poll a pending stake ------------------------------------------------
+  const schedulePoll = useCallback(() => {
+    if (pollTimer.current) clearTimeout(pollTimer.current);
+    pollTimer.current = setTimeout(async () => {
+      pollAttempts.current += 1;
+      const result = await api('/api/stake/verify', { method: 'POST' });
+
+      if (result.state) setState(result.state);
+      if (!result.ok && result.error) {
+        setError(result.error);
+        return;
+      }
+      if (result.pending && pollAttempts.current < VERIFY_MAX_ATTEMPTS) {
+        schedulePoll();
+      }
+    }, VERIFY_POLL_MS);
+  }, []);
+
+  useEffect(() => {
+    if (state?.activeStake?.status === 'pending') {
+      schedulePoll();
+    }
+    return () => {
+      if (pollTimer.current) clearTimeout(pollTimer.current);
+    };
+  }, [state?.activeStake?.status, schedulePoll]);
+
+  // --- actions -------------------------------------------------------------
+
+  /** Applies an API result, surfacing its error rather than swallowing it. */
+  function apply(result: ApiResult): boolean {
+    if (result.state) setState(result.state);
+    if (!result.ok) {
+      setError(result.error ?? 'Something went wrong.');
+      return false;
+    }
+    setError(null);
+    return true;
+  }
+
+  function handleWalletError(err: unknown) {
+    if (err instanceof WalletError) {
+      setError(err.message);
+    } else {
+      console.error(err);
+      setError('Something went wrong talking to your wallet.');
+    }
+  }
+
+  const connect = useCallback(async () => {
+    setBusy('connect');
+    setError(null);
+    try {
+      const address = await connectEvmAccount();
+
+      const challenge = await api('/api/auth/nonce', { method: 'POST' });
+      if (!challenge.ok) {
+        setError(challenge.error ?? 'Could not start the login.');
+        return;
+      }
+
+      const { nonce, message } = challenge as unknown as {
+        nonce: string;
+        message: string;
+      };
+      const signature = await signLoginMessage(address, message);
+
+      const verified = await api('/api/auth/verify', {
+        method: 'POST',
+        body: JSON.stringify({ address, signature, nonce }),
+      });
+      if (!verified.ok) {
+        setError(verified.error ?? 'Could not verify your wallet.');
+        return;
+      }
+
+      const me = await api('/api/me');
+      if (apply(me)) setPhase('ready');
+    } catch (err) {
+      handleWalletError(err);
+    } finally {
+      setBusy(null);
+    }
+  }, []);
+
+  const acceptConsent = useCallback(async () => {
+    setBusy('consent');
+    const result = await api('/api/consent', {
+      method: 'POST',
+      body: JSON.stringify({
+        granted: true,
+        consentVersion: state?.consentVersion,
+      }),
+    });
+    apply(result);
+    setBusy(null);
+  }, [state?.consentVersion]);
+
+  const withdrawConsent = useCallback(async () => {
+    const confirmed = window.confirm(
+      'Withdraw consent and delete your saved risk categories? Any stake already in progress is unaffected and will still be returned.',
+    );
+    if (!confirmed) return;
+
+    setBusy('withdraw');
+    const result = await api('/api/consent', { method: 'DELETE' });
+    if (apply(result)) setFlash('Your risk categories have been deleted.');
+    setBusy(null);
+  }, []);
+
+  const saveConditions = useCallback(async (keys: ConditionKey[]) => {
+    setBusy('conditions');
+    const result = await api('/api/conditions', {
+      method: 'POST',
+      body: JSON.stringify({ keys }),
+    });
+    apply(result);
+    setBusy(null);
+  }, []);
+
+  const stake = useCallback(async () => {
+    if (!state) return;
+    setBusy('stake');
+    setError(null);
+    try {
+      const hash = await sendUsdtStake({
+        from: state.address,
+        to: state.config.escrowAddress,
+        amountBase: toBaseUnits(state.config.stakeAmountUsdt),
+      });
+
+      const result = await api('/api/stake', {
+        method: 'POST',
+        body: JSON.stringify({ txHash: hash }),
+      });
+      if (apply(result)) {
+        pollAttempts.current = 0;
+        setFlash(
+          result.pending
+            ? 'Payment sent. Confirming on Polygon now.'
+            : 'You are committed. Check in every day.',
+        );
+      }
+    } catch (err) {
+      handleWalletError(err);
+    } finally {
+      setBusy(null);
+    }
+  }, [state]);
+
+  const checkIn = useCallback(async () => {
+    setBusy('checkin');
+    const result = await api('/api/checkin', { method: 'POST' });
+    if (apply(result)) {
+      setFlash(
+        result.alreadyCheckedIn
+          ? 'You already checked in today.'
+          : 'Checked in. Nice work.',
+      );
+    }
+    setBusy(null);
+  }, []);
+
+  // Clear the flash message after a moment so it does not linger.
+  useEffect(() => {
+    if (!flash) return;
+    const timer = setTimeout(() => setFlash(null), 4000);
+    return () => clearTimeout(timer);
+  }, [flash]);
+
+  // --- render --------------------------------------------------------------
+
+  if (phase === 'booting') {
+    return (
+      <main className="shell">
+        <Masthead />
+        <div className="card" style={{ textAlign: 'center', padding: 40 }}>
+          <span className="spinner dark" style={{ width: 26, height: 26 }} />
+        </div>
+      </main>
+    );
+  }
+
+  const notices = (
+    <>
+      {error ? <div className="notice error">{error}</div> : null}
+      {flash ? <div className="notice good">{flash}</div> : null}
+    </>
+  );
+
+  if (phase === 'connect') {
+    return (
+      <main className="shell">
+        <Masthead />
+        {notices}
+
+        <section className="card">
+          <h2>Your family history, turned into a daily habit</h2>
+          <p className="muted" style={{ marginTop: 10 }}>
+            Pick the conditions that run in your family. Preventah gives you a
+            small, specific plan each day: one diet change, one bit of
+            movement, one habit.
+          </p>
+          <p className="muted">
+            Back it with a USDT stake. Show up, and you get it back with a
+            reward. Miss the target, and you still get your stake back in full.
+          </p>
+
+          {host && !host.insideNimiqPay ? (
+            <div className="notice info" style={{ marginTop: 14 }}>
+              Preventah is a Nimiq Pay Mini App. Open it inside Nimiq Pay to
+              connect your wallet and stake.
+            </div>
+          ) : null}
+
+          <button
+            type="button"
+            className="btn btn-primary"
+            style={{ marginTop: 16 }}
+            disabled={busy !== null}
+            onClick={connect}
+          >
+            {busy === 'connect' ? <span className="spinner" /> : null}
+            {busy === 'connect' ? 'Check your wallet' : 'Connect wallet'}
+          </button>
+
+          <p className="faint" style={{ marginTop: 12, textAlign: 'center' }}>
+            You will be asked to sign a free message. No funds move.
+          </p>
+        </section>
+      </main>
+    );
+  }
+
+  if (!state) {
+    return (
+      <main className="shell">
+        <Masthead />
+        <div className="notice error">
+          Could not load your account. Please reopen the app.
+        </div>
+      </main>
+    );
+  }
+
+  const short = `${state.address.slice(0, 6)}...${state.address.slice(-4)}`;
+
+  return (
+    <main className="shell">
+      <Masthead subtitle={short} />
+      {notices}
+
+      {!state.hasConsent ? (
+        <ConsentCard
+          consentVersion={state.consentVersion}
+          busy={busy === 'consent'}
+          onAccept={acceptConsent}
+        />
+      ) : state.selections.length === 0 ? (
+        <ConditionsCard
+          initial={state.selections}
+          busy={busy === 'conditions'}
+          onSave={saveConditions}
+        />
+      ) : (
+        <>
+          <PlanCard plan={state.plan} />
+
+          <CommitmentCard
+            state={state}
+            busy={busy}
+            onStake={stake}
+            onCheckIn={checkIn}
+          />
+
+          <ConditionsCard
+            key={state.selections.join(',')}
+            initial={state.selections}
+            busy={busy === 'conditions'}
+            compact
+            onSave={saveConditions}
+          />
+
+          <HistoryCard history={state.history} />
+
+          <div style={{ textAlign: 'center', marginTop: 4 }}>
+            <button
+              type="button"
+              className="btn-danger-text"
+              disabled={busy !== null}
+              onClick={withdrawConsent}
+            >
+              Withdraw consent and delete my risk categories
+            </button>
+          </div>
+        </>
+      )}
+
+      <p className="footer-note">
+        Preventah gives general lifestyle guidance, not medical advice. It does
+        not diagnose or treat anything. Talk to a clinician about your family
+        history.
+      </p>
+    </main>
+  );
+}
