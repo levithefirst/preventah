@@ -37,9 +37,19 @@ export async function POST() {
     } else if (!verdict.retryable) {
       await rejectStake(stake.id, verdict.reason);
       return fail(verdict.reason, 422);
+    } else {
+      // Logged so a stake that stays pending can be diagnosed from the
+      // production logs instead of guessed at.
+      console.warn(
+        `[preventah] stake ${stake.id} still pending: ${verdict.reason}`,
+      );
     }
 
-    return ok({ state: await buildState(user), pending: !verdict.ok });
+    return ok({
+      state: await buildState(user),
+      pending: !verdict.ok,
+      reason: verdict.ok ? null : verdict.reason,
+    });
   } catch (error) {
     return serverError('stake/verify', error);
   }

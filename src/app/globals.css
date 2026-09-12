@@ -603,3 +603,64 @@ p:last-child {
 a {
   color: var(--accent);
 }
+
+/* --- transaction reference ------------------------------------------------ */
+
+.tx-ref {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.tx-ref-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 6px;
+}
+
+.tx-ref-hash {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  word-break: break-all;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--text-dim);
+  /* Long-press to select is the fallback when the clipboard API is blocked. */
+  user-select: all;
+  -webkit-user-select: all;
+}
+
+.tx-ref-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.tx-ref-actions .btn {
+  width: auto;
+  flex: 1;
+}
+
+.tx-ref .faint {
+  margin-top: 8px;
+  display: block;
+}
+
+.btn-linklike {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: 2px;
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--accent);
+  cursor: pointer;
+  text-align: left;
+}

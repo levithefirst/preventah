@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import type { StakeHistoryView } from '@/lib/state';
 
 const STATUS_LABEL: Record<StakeHistoryView['status'], { text: string; tone: string }> = {
@@ -11,8 +12,31 @@ const STATUS_LABEL: Record<StakeHistoryView['status'], { text: string; tone: str
   payout_failed: { text: 'Needs attention', tone: 'bad' },
 };
 
-function polygonscan(hash: string): string {
-  return `https://polygonscan.com/tx/${hash}`;
+/**
+ * Copies a payout hash rather than linking out.
+ *
+ * Same constraint as the pending card: target="_blank" does not reliably
+ * open from inside the Nimiq Pay WebView, so this never depends on
+ * navigation. The hash is copied, or named so it can be looked up by hand.
+ */
+function PayoutHash({ hash }: { hash: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(hash);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <button type="button" className="btn-linklike" onClick={copy}>
+      {copied ? 'Payout hash copied' : 'Copy payout hash'}
+    </button>
+  );
 }
 
 export default function HistoryCard({ history }: { history: StakeHistoryView[] }) {
@@ -42,16 +66,7 @@ export default function HistoryCard({ history }: { history: StakeHistoryView[] }
                 {row.checkinCount} of {row.targetDays} days &middot; started{' '}
                 {row.startedAt.slice(0, 10)}
               </div>
-              {row.payoutTxHash ? (
-                <a
-                  className="faint"
-                  href={polygonscan(row.payoutTxHash)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  View payout
-                </a>
-              ) : null}
+              {row.payoutTxHash ? <PayoutHash hash={row.payoutTxHash} /> : null}
             </div>
             <span className={`badge ${status.tone}`}>{status.text}</span>
           </div>

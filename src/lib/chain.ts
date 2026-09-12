@@ -13,6 +13,14 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { polygon } from 'viem/chains';
 import { CHAIN_ID, USDT_ADDRESS } from './config';
 import { escrowAddress, escrowPrivateKey, polygonRpcUrl } from './server-env';
+import {
+  REQUIRED_CONFIRMATIONS,
+  confirmationsFor,
+  findMatchingTransfer,
+  type TransferLogLike,
+} from './verify-rules';
+
+export { REQUIRED_CONFIRMATIONS } from './verify-rules';
 
 /**
  * On-chain verification and payout.
@@ -22,9 +30,6 @@ import { escrowAddress, escrowPrivateKey, polygonRpcUrl } from './server-env';
  * receipt has been read from Polygon and every field checked against what
  * the client claimed.
  */
-
-/** Confirmations required before a stake counts as settled. */
-export const REQUIRED_CONFIRMATIONS = 3n;
 
 function chain() {
   // Polygon mainnet is the default; defineChain keeps a custom chain id
@@ -63,13 +68,25 @@ export async function verifyStakeTransaction(
     return { ok: false, reason: 'Malformed transaction hash.', retryable: false };
   }
 
-  const client = publicClient();
+  let client: ReturnType<typeof publicClient>;
+  try {
+    client = publicClient();
+  } catch {
+    // POLYGON_RPC_URL missing or invalid. That is an operator problem, not a
+    // bad payment, so it stays retryable: fixing the config and rechecking
+    // must be able to recover the stake.
+    return {
+      ok: false,
+      reason: 'Chain access is not configured. An operator needs to fix this.',
+      retryable: true,
+    };
+  }
 
-  let receipt;
+  let receipt: Awaited<ReturnType<typeof client.getTransactionReceipt>>;
   try {
     receipt = await client.getTransactionReceipt({ hash: txHash as Hash });
   } catch {
-    // Not mined yet, or the RPC is briefly unavailable. Both are worth retrying.
+    // Not mined yet, or the RPC is briefly unavailable. Both worth retrying.
     return {
       ok: false,
       reason: 'Transaction not found on-chain yet.',
@@ -81,35 +98,59 @@ export async function verifyStakeTransaction(
     return { ok: false, reason: 'Transaction reverted on-chain.', retryable: false };
   }
 
-  const latest = await client.getBlockNumber();
-  if (latest - receipt.blockNumber + 1n < REQUIRED_CONFIRMATIONS) {
+  let latest: bigint;
+  try {
+    latest = await client.getBlockNumber();
+  } catch {
     return {
       ok: false,
-      reason: 'Waiting for confirmations.',
+      reason: 'Could not read the current block height.',
       retryable: true,
     };
   }
 
-  // Read the Transfer events rather than the transaction's input data: this
-  // works whether the user paid directly or through a batching contract, and
-  // it reflects what actually moved rather than what was requested.
-  const transfers = parseEventLogs({
-    abi: erc20Abi,
-    eventName: 'Transfer',
-    logs: receipt.logs,
+  const confirmations = confirmationsFor(latest, receipt.blockNumber);
+  if (confirmations < REQUIRED_CONFIRMATIONS) {
+    return {
+      ok: false,
+      reason: `Waiting for confirmations (${confirmations}/${REQUIRED_CONFIRMATIONS}).`,
+      retryable: true,
+    };
+  }
+
+  let transfers: TransferLogLike[];
+  try {
+    transfers = parseEventLogs({
+      abi: erc20Abi,
+      eventName: 'Transfer',
+      logs: receipt.logs,
+    }) as unknown as TransferLogLike[];
+  } catch {
+    return {
+      ok: false,
+      reason: 'Could not decode the transfer logs for this transaction.',
+      retryable: false,
+    };
+  }
+
+  let escrow: string;
+  try {
+    escrow = escrowAddress();
+  } catch {
+    // Same reasoning as a missing RPC URL: recoverable by an operator.
+    return {
+      ok: false,
+      reason: 'Escrow wallet is not configured. An operator needs to fix this.',
+      retryable: true,
+    };
+  }
+
+  const match = findMatchingTransfer(transfers, {
+    token: USDT_ADDRESS,
+    escrow,
+    from: expectedFrom,
+    minAmount: expectedAmountBase,
   });
-
-  const escrow = getAddress(escrowAddress());
-  const from = getAddress(expectedFrom);
-  const token = getAddress(USDT_ADDRESS);
-
-  const match = transfers.find(
-    (log) =>
-      getAddress(log.address) === token &&
-      getAddress(log.args.to) === escrow &&
-      getAddress(log.args.from) === from &&
-      log.args.value >= expectedAmountBase,
-  );
 
   if (!match) {
     return {

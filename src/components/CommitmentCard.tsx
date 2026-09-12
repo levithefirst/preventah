@@ -1,6 +1,7 @@
 'use client';
 
 import type { ActiveStakeView, AppState } from '@/lib/state';
+import TxReference from './TxReference';
 
 /** UTC date string N days after `iso`. */
 function addDays(iso: string, days: number): string {
@@ -49,13 +50,19 @@ function StreakDots({ stake }: { stake: ActiveStakeView }) {
 export default function CommitmentCard({
   state,
   busy,
+  pendingReason,
+  verifyStalled,
   onStake,
   onCheckIn,
+  onRecheck,
 }: {
   state: AppState;
   busy: string | null;
+  pendingReason: string | null;
+  verifyStalled: boolean;
   onStake: () => void;
   onCheckIn: () => void;
+  onRecheck: () => void;
 }) {
   const stake = state.activeStake;
 
@@ -112,30 +119,58 @@ export default function CommitmentCard({
       <section className="card">
         <div className="card-head">
           <h2>Confirming your stake</h2>
-          <span className="badge warn">On-chain</span>
+          <span className={`badge ${verifyStalled ? 'bad' : 'warn'}`}>
+            {verifyStalled ? 'Not confirmed yet' : 'On-chain'}
+          </span>
         </div>
-        <p className="muted">
-          Your {stake.amountUsdt} USDT payment is waiting for confirmations on
-          Polygon. This usually takes under a minute, and it keeps running if
-          you close the app.
-        </p>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            padding: '18px 0',
-          }}
+
+        {verifyStalled ? (
+          <>
+            <div className="notice error">
+              {pendingReason ?? 'We could not confirm your payment yet.'}
+            </div>
+            <p className="muted">
+              Your {stake.amountUsdt} USDT payment was sent and your funds are
+              not lost. Confirmation just has not completed yet. Check again
+              now, or reopen Preventah later &mdash; the daily settlement job
+              also retries pending stakes on its own.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="muted">
+              Your {stake.amountUsdt} USDT payment is waiting for confirmations
+              on Polygon. This usually takes under a minute, and it keeps
+              running if you close the app.
+            </p>
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                padding: '18px 0',
+              }}
+            >
+              <span className="spinner dark" style={{ width: 26, height: 26 }} />
+            </div>
+            {pendingReason ? (
+              <p className="faint" style={{ textAlign: 'center' }}>
+                {pendingReason}
+              </p>
+            ) : null}
+          </>
+        )}
+
+        <button
+          type="button"
+          className={`btn ${verifyStalled ? 'btn-primary' : 'btn-secondary'}`}
+          disabled={busy !== null}
+          onClick={onRecheck}
         >
-          <span className="spinner dark" style={{ width: 26, height: 26 }} />
-        </div>
-        <a
-          className="faint"
-          href={`https://polygonscan.com/tx/${stake.txHash}`}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          View transaction
-        </a>
+          {busy === 'recheck' ? <span className="spinner" /> : null}
+          {busy === 'recheck' ? 'Checking' : 'Check again'}
+        </button>
+
+        <TxReference hash={stake.txHash} label="Your payment" />
       </section>
     );
   }

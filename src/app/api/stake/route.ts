@@ -79,11 +79,16 @@ export async function POST(request: Request) {
     } else if (!verdict.retryable) {
       await rejectStake(stake.id, verdict.reason);
       return fail(verdict.reason, 422);
+    } else {
+      console.warn(
+        `[preventah] stake ${stake.id} registered pending: ${verdict.reason}`,
+      );
     }
 
     return ok({
       state: await buildState(user),
       pending: !verdict.ok,
+      reason: verdict.ok ? null : verdict.reason,
     });
   } catch (error) {
     return serverError('stake POST', error);

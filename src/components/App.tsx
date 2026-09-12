@@ -26,6 +26,8 @@ interface ApiResult {
   error?: string;
   state?: AppState;
   pending?: boolean;
+  /** Why a stake is still pending, straight from the on-chain verdict. */
+  reason?: string | null;
   alreadyCheckedIn?: boolean;
 }
 
@@ -53,8 +55,12 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
 
+  const [pendingReason, setPendingReason] = useState<string | null>(null);
+  const [verifyStalled, setVerifyStalled] = useState(false);
+
   const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollAttempts = useRef(0);
+  const pollRef = useRef<() => void>(() => {});
 
   // --- boot ---------------------------------------------------------------
   useEffect(() => {
@@ -83,31 +89,60 @@ export default function App() {
   }, []);
 
   // --- poll a pending stake ------------------------------------------------
-  const schedulePoll = useCallback(() => {
-    if (pollTimer.current) clearTimeout(pollTimer.current);
-    pollTimer.current = setTimeout(async () => {
-      pollAttempts.current += 1;
-      const result = await api('/api/stake/verify', { method: 'POST' });
+  //
+  // Polling must always reach a terminal state. Previously it simply stopped
+  // after VERIFY_MAX_ATTEMPTS while the pending card kept rendering a
+  // spinner, so any stake that did not confirm inside the window appeared to
+  // hang forever with no explanation and no way to retry.
+  const verifyOnce = useCallback(async () => {
+    pollAttempts.current += 1;
+    const result = await api('/api/stake/verify', { method: 'POST' });
 
-      if (result.state) setState(result.state);
-      if (!result.ok && result.error) {
-        setError(result.error);
-        return;
-      }
-      if (result.pending && pollAttempts.current < VERIFY_MAX_ATTEMPTS) {
-        schedulePoll();
-      }
-    }, VERIFY_POLL_MS);
+    if (result.state) setState(result.state);
+
+    if (!result.ok) {
+      // A rejected stake (422) or a server fault. Either way, stop and say so.
+      setPendingReason(result.error ?? 'Could not check the transaction.');
+      setVerifyStalled(true);
+      return;
+    }
+
+    if (!result.pending) {
+      setPendingReason(null);
+      setVerifyStalled(false);
+      return;
+    }
+
+    setPendingReason(typeof result.reason === 'string' ? result.reason : null);
+
+    if (pollAttempts.current >= VERIFY_MAX_ATTEMPTS) {
+      setVerifyStalled(true);
+      return;
+    }
+    pollRef.current();
   }, []);
 
+  const schedulePoll = useCallback(() => {
+    // One timer slot, cleared first, so overlapping callers collapse into a
+    // single chain rather than compounding.
+    if (pollTimer.current) clearTimeout(pollTimer.current);
+    pollTimer.current = setTimeout(() => {
+      void verifyOnce();
+    }, VERIFY_POLL_MS);
+  }, [verifyOnce]);
+
   useEffect(() => {
-    if (state?.activeStake?.status === 'pending') {
+    pollRef.current = schedulePoll;
+  }, [schedulePoll]);
+
+  useEffect(() => {
+    if (state?.activeStake?.status === 'pending' && !verifyStalled) {
       schedulePoll();
     }
     return () => {
       if (pollTimer.current) clearTimeout(pollTimer.current);
     };
-  }, [state?.activeStake?.status, schedulePoll]);
+  }, [state?.activeStake?.status, verifyStalled, schedulePoll]);
 
   // --- actions -------------------------------------------------------------
 
@@ -219,6 +254,10 @@ export default function App() {
       });
       if (apply(result)) {
         pollAttempts.current = 0;
+        setVerifyStalled(false);
+        setPendingReason(
+          typeof result.reason === 'string' ? result.reason : null,
+        );
         setFlash(
           result.pending
             ? 'Payment sent. Confirming on Polygon now.'
@@ -231,6 +270,17 @@ export default function App() {
       setBusy(null);
     }
   }, [state]);
+
+  /** Manual re-check, so a stalled confirmation is always recoverable. */
+  const recheckStake = useCallback(async () => {
+    if (pollTimer.current) clearTimeout(pollTimer.current);
+    pollAttempts.current = 0;
+    setVerifyStalled(false);
+    setError(null);
+    setBusy('recheck');
+    await verifyOnce();
+    setBusy(null);
+  }, [verifyOnce]);
 
   const checkIn = useCallback(async () => {
     setBusy('checkin');
@@ -353,8 +403,11 @@ export default function App() {
           <CommitmentCard
             state={state}
             busy={busy}
+            pendingReason={pendingReason}
+            verifyStalled={verifyStalled}
             onStake={stake}
             onCheckIn={checkIn}
+            onRecheck={recheckStake}
           />
 
           <ConditionsCard
