@@ -1,0 +1,16 @@
+node_modules/
+.next/
+out/
+build/
+dist/
+
+# Environment files - never commit real values.
+.env
+.env.*
+!.env.example
+
+.vercel
+*.tsbuildinfo
+next-env.d.ts
+.DS_Store
+npm-debug.log*
