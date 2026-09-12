@@ -109,7 +109,7 @@ Set these in the Vercel dashboard for a deployment. See `.env.example`.
 | `CRON_SECRET` | server | Guards `/api/cron/payout` |
 | `SESSION_SECRET` | server | Signs wallet-auth session cookies |
 | `POLYGON_RPC_URL` | server | Reading receipts, broadcasting payouts |
-| `NEXT_PUBLIC_STAKE_AMOUNT_USDT` | client | Stake size, defaults to 5 |
+| `NEXT_PUBLIC_STAKE_AMOUNT_USDT` | client | Stake size, defaults to 1 |
 | `REWARD_BPS` | server | Reward in basis points, defaults to 500 (5%) |
 
 `ESCROW_PRIVATE_KEY` must never be prefixed with `NEXT_PUBLIC_` and must never

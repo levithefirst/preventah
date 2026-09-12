@@ -28,7 +28,7 @@ export const ESCROW_WALLET_ADDRESS = (
 
 /** Default commitment size, in whole USDT. */
 export const STAKE_AMOUNT_USDT = Number(
-  process.env.NEXT_PUBLIC_STAKE_AMOUNT_USDT ?? 5,
+  process.env.NEXT_PUBLIC_STAKE_AMOUNT_USDT ?? 1,
 );
 
 /** Commitment shape: check in on 5 separate days inside a 7-day window. */
