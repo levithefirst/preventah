@@ -2,6 +2,7 @@
 
 import type { ActiveStakeView, AppState } from '@/lib/state';
 import TxReference from './TxReference';
+import { diagMark } from '@/lib/diag';
 
 /** UTC date string N days after `iso`. */
 function addDays(iso: string, days: number): string {
@@ -64,6 +65,7 @@ export default function CommitmentCard({
   onCheckIn: () => void;
   onRecheck: () => void;
 }) {
+  diagMark('render_commitment_card'); // TEMPORARY DIAGNOSTIC
   const stake = state.activeStake;
 
   // --- No commitment yet ---------------------------------------------------
@@ -115,6 +117,7 @@ export default function CommitmentCard({
 
   // --- Stake broadcast, waiting on confirmations ---------------------------
   if (stake.status === 'pending') {
+    diagMark('render_commitment_pending'); // TEMPORARY DIAGNOSTIC
     return (
       <section className="card">
         <div className="card-head">

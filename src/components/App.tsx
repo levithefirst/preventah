@@ -12,6 +12,8 @@ import {
   signLoginMessage,
   type HostInfo,
 } from '@/lib/wallet';
+import { diagBeacon, diagMark, setDiagId } from '@/lib/diag';
+import DiagnosticBoundary from './DiagnosticBoundary';
 import Masthead from './Masthead';
 import ConsentCard from './ConsentCard';
 import ConditionsCard from './ConditionsCard';
@@ -195,6 +197,7 @@ export default function App() {
     // TEMPORARY DIAGNOSTIC - correlation id for this sign-in attempt.
     const requestId = Math.random().toString(16).slice(2, 10);
     const startedAt = Date.now();
+    setDiagId(requestId);
 
     try {
       authStep('before_request_accounts', requestId, startedAt);
@@ -230,7 +233,16 @@ export default function App() {
       authStep('after_auth_verify', requestId, startedAt);
 
       const me = await api('/api/me');
-      if (apply(me)) setPhase('ready');
+      authStep('me_response_received', requestId, startedAt);
+
+      const applied = apply(me);
+      authStep(`after_apply_me_ok=${applied}`, requestId, startedAt);
+
+      if (applied) {
+        authStep('before_set_phase_ready', requestId, startedAt);
+        setPhase('ready');
+        authStep('after_set_phase_ready', requestId, startedAt);
+      }
       authStep('after_session_loaded', requestId, startedAt);
     } catch (err) {
       authStep('caught_error', requestId, startedAt);
@@ -333,6 +345,15 @@ export default function App() {
     setBusy(null);
   }, []);
 
+  // TEMPORARY DIAGNOSTIC - fires only after the whole authenticated tree has
+  // mounted. Its presence in the Vercel log proves render survived; its
+  // absence proves the WebView died during render.
+  useEffect(() => {
+    if (phase !== 'ready' || !state) return;
+    diagMark('authenticated_tree_committed');
+    diagBeacon('render_committed');
+  }, [phase, state]);
+
   // Clear the flash message after a moment so it does not linger.
   useEffect(() => {
     if (!flash) return;
@@ -415,6 +436,8 @@ export default function App() {
     );
   }
 
+  diagMark('authenticated_branch_render_begin');
+
   const short = `${state.address.slice(0, 6)}...${state.address.slice(-4)}`;
 
   return (
@@ -422,6 +445,7 @@ export default function App() {
       <Masthead subtitle={short} />
       {notices}
 
+      <DiagnosticBoundary>
       {!state.hasConsent ? (
         <ConsentCard
           consentVersion={state.consentVersion}
@@ -470,6 +494,7 @@ export default function App() {
           </div>
         </>
       )}
+      </DiagnosticBoundary>
 
       <p className="footer-note">
         Preventah gives general lifestyle guidance, not medical advice. It does

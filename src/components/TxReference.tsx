@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { diagMark } from '@/lib/diag';
 
 /**
  * A transaction reference that works inside the Nimiq Pay WebView.
@@ -20,6 +21,7 @@ export default function TxReference({
   label?: string;
 }) {
   const [copied, setCopied] = useState<string | null>(null);
+  diagMark('render_tx_reference'); // TEMPORARY DIAGNOSTIC
   const explorerUrl = `https://polygonscan.com/tx/${hash}`;
 
   async function copy(value: string, what: string) {
