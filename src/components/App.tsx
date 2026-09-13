@@ -17,6 +17,7 @@ import RenderErrorBoundary from './RenderErrorBoundary';
 import Masthead from './Masthead';
 import ConsentCard from './ConsentCard';
 import ConditionsCard from './ConditionsCard';
+import ProgressCard from './ProgressCard';
 import PlanCard from './PlanCard';
 import CommitmentCard from './CommitmentCard';
 import HistoryCard from './HistoryCard';
@@ -208,13 +209,13 @@ export default function App() {
 
   const withdrawConsent = useCallback(async () => {
     const confirmed = window.confirm(
-      'Withdraw consent and delete your saved risk categories? Any stake already in progress is unaffected and will still be returned.',
+      'Withdraw consent and delete your saved conditions and measurements? Any stake already in progress is unaffected and will still be returned.',
     );
     if (!confirmed) return;
 
     setBusy('withdraw');
     const result = await api('/api/consent', { method: 'DELETE' });
-    if (apply(result)) setFlash('Your risk categories have been deleted.');
+    if (apply(result)) setFlash('Your health data has been deleted.');
     setBusy(null);
   }, []);
 
@@ -225,6 +226,35 @@ export default function App() {
       body: JSON.stringify({ keys }),
     });
     apply(result);
+    setBusy(null);
+  }, []);
+
+  const recordMeasurement = useCallback(
+    async (input: {
+      kind: string;
+      unit: string;
+      value: string;
+      valueSecondary: string;
+      measuredOn: string;
+    }) => {
+      setBusy('measurement');
+      const result = await api('/api/measurements', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      });
+      if (apply(result)) setFlash('Recorded.');
+      setBusy(null);
+    },
+    [],
+  );
+
+  const deleteMeasurement = useCallback(async (id: string) => {
+    setBusy('measurement');
+    const result = await api('/api/measurements', {
+      method: 'DELETE',
+      body: JSON.stringify({ id }),
+    });
+    if (apply(result)) setFlash('Deleted.');
     setBusy(null);
   }, []);
 
@@ -411,6 +441,14 @@ export default function App() {
             onSave={saveConditions}
           />
 
+          <ProgressCard
+            measurements={state.measurements}
+            today={state.today}
+            busy={busy === 'measurement'}
+            onRecord={recordMeasurement}
+            onDelete={deleteMeasurement}
+          />
+
           <HistoryCard history={state.history} />
 
           <div style={{ textAlign: 'center', marginTop: 4 }}>
@@ -420,7 +458,7 @@ export default function App() {
               disabled={busy !== null}
               onClick={withdrawConsent}
             >
-              Withdraw consent and delete my risk categories
+              Withdraw consent and delete my health data
             </button>
           </div>
         </>

@@ -149,3 +149,51 @@ CREATE TABLE IF NOT EXISTS auth_nonces (
 );
 
 CREATE INDEX IF NOT EXISTS auth_nonces_expiry_idx ON auth_nonces (expires_at);
+
+-- ---------------------------------------------------------------------------
+-- health_measurements: numbers the user chooses to record about themselves.
+--
+-- Covered by the same consent as condition_selections, and deleted with them
+-- when consent is withdrawn. There is no notes column and no symptom column,
+-- deliberately: this table holds a kind, a number, a unit and a date, and
+-- nothing that could become a clinical record.
+--
+-- value_secondary exists for blood pressure, which is one reading with two
+-- numbers. Storing the pair on one row keeps systolic and diastolic from
+-- drifting apart, while the CHECK below keeps every other kind to a single
+-- number. Range validation proper lives in src/lib/measurements.ts, which
+-- both the route and the form use; the bounds here are a backstop against a
+-- number that could only be a typo.
+--
+-- UNIQUE (user_id, kind, measured_on) means recording again for the same day
+-- corrects that day rather than adding a second point to the chart.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS health_measurements (
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id          uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind             text NOT NULL CHECK (kind IN (
+                     'weight',
+                     'waist',
+                     'blood_pressure',
+                     'resting_heart_rate',
+                     'blood_glucose',
+                     'sleep_hours'
+                   )),
+  unit             text NOT NULL CHECK (unit IN (
+                     'kg', 'lb', 'cm', 'in', 'mmHg', 'bpm', 'mmol/L', 'mg/dL', 'h'
+                   )),
+  value            numeric(7,2) NOT NULL CHECK (value >= 0 AND value <= 1000),
+  value_secondary  numeric(7,2) CHECK (value_secondary IS NULL
+                                   OR (value_secondary >= 0 AND value_secondary <= 1000)),
+  measured_on      date NOT NULL,
+  created_at       timestamptz NOT NULL DEFAULT now(),
+  updated_at       timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT health_measurements_pair_only_for_bp CHECK (
+    (kind = 'blood_pressure' AND value_secondary IS NOT NULL AND value_secondary < value)
+    OR (kind <> 'blood_pressure' AND value_secondary IS NULL)
+  ),
+  UNIQUE (user_id, kind, measured_on)
+);
+
+CREATE INDEX IF NOT EXISTS health_measurements_user_idx
+  ON health_measurements (user_id, kind, measured_on DESC);

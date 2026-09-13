@@ -2,6 +2,7 @@ import 'server-only';
 import { db } from './db';
 import { CONSENT_VERSION, TARGET_DAYS, WINDOW_DAYS } from './config';
 import type { ConditionId } from './conditions';
+import type { MeasurementKind, ValidMeasurement } from './measurements';
 
 /**
  * Data access layer. Every function here takes already-validated input;
@@ -67,6 +68,8 @@ export async function revokeConsentAndErase(userId: string): Promise<void> {
     WHERE user_id = ${userId} AND revoked_at IS NULL
   `;
   await sql`DELETE FROM condition_selections WHERE user_id = ${userId}`;
+  // Measurements are covered by the same consent, so they go with it.
+  await sql`DELETE FROM health_measurements WHERE user_id = ${userId}`;
 }
 
 // --------------------------------------------------------------------------
@@ -421,4 +424,105 @@ export async function getPendingStakes(limit: number): Promise<StakeRow[]> {
     [limit],
   )) as RawStakeRow[];
   return rows.map(hydrate);
+}
+
+// --------------------------------------------------------------------------
+// Health measurements
+// --------------------------------------------------------------------------
+
+/**
+ * How much history is kept in the state payload.
+ *
+ * Six kinds at 90 points each is the worst case, and the chart only has a
+ * few hundred pixels of width, so more than this would be paid for on every
+ * page load and never drawn.
+ */
+export const MEASUREMENT_HISTORY_DAYS = 90;
+
+export interface MeasurementRow {
+  id: string;
+  kind: MeasurementKind;
+  unit: string;
+  value: string;
+  value_secondary: string | null;
+  measured_on: string;
+}
+
+/**
+ * Records one measurement, replacing that day's entry if there is one.
+ *
+ * Caller must have checked consent. Input must already have passed
+ * validateMeasurement; the database CHECK constraints are a backstop, not
+ * the validation.
+ */
+export async function recordMeasurement(
+  userId: string,
+  input: ValidMeasurement,
+): Promise<void> {
+  const sql = db();
+  await sql`
+    INSERT INTO health_measurements
+      (user_id, kind, unit, value, value_secondary, measured_on)
+    VALUES (
+      ${userId}::uuid,
+      ${input.kind},
+      ${input.unit},
+      ${input.value},
+      ${input.valueSecondary},
+      ${input.measuredOn}::date
+    )
+    ON CONFLICT (user_id, kind, measured_on) DO UPDATE
+      SET unit            = EXCLUDED.unit,
+          value           = EXCLUDED.value,
+          value_secondary = EXCLUDED.value_secondary,
+          updated_at      = now()
+  `;
+}
+
+/**
+ * A user's recent measurements, oldest first.
+ *
+ * measured_on is cast to text here for the same reason STAKE_SELECT does it:
+ * left as a bare date column the driver yields a Date object, which JSON
+ * encodes to a full ISO timestamp rather than the YYYY-MM-DD the client
+ * expects. That mismatch has crashed this app's render once already.
+ */
+export async function getMeasurements(
+  userId: string,
+): Promise<MeasurementRow[]> {
+  const sql = db();
+  return (await sql`
+    SELECT id,
+           kind,
+           unit,
+           value::text                        AS value,
+           value_secondary::text              AS value_secondary,
+           to_char(measured_on, 'YYYY-MM-DD') AS measured_on
+      FROM health_measurements
+     WHERE user_id = ${userId}::uuid
+       AND measured_on >= (now() AT TIME ZONE 'utc')::date
+                          - ${MEASUREMENT_HISTORY_DAYS}::integer
+     ORDER BY kind, measured_on ASC
+  `) as MeasurementRow[];
+}
+
+/** Deletes one of the user's own measurements. Returns false if it was not theirs. */
+export async function deleteMeasurement(
+  userId: string,
+  measurementId: string,
+): Promise<boolean> {
+  const sql = db();
+  const rows = (await sql`
+    DELETE FROM health_measurements
+     WHERE id = ${measurementId}::uuid
+       AND user_id = ${userId}::uuid
+    RETURNING id
+  `) as unknown[];
+  return rows.length > 0;
+}
+
+/** Deletes every measurement a user holds, without touching consent. */
+export async function deleteAllMeasurements(userId: string): Promise<void> {
+  const sql = db();
+  await sql`DELETE FROM health_measurements WHERE user_id = ${userId}::uuid`;
 }

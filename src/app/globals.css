@@ -890,3 +890,123 @@ a {
     margin-left: 0;
   }
 }
+
+/* --- progress ------------------------------------------------------------ */
+
+.measure-form {
+  margin-top: 14px;
+}
+
+.field-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin: 12px 0 4px;
+}
+
+.measure-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.measure-input {
+  flex: 1;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px; /* below 16px iOS zooms the WebView on focus */
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.measure-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+.measure-sep {
+  color: var(--text-faint);
+  font-size: 1.1rem;
+}
+
+.measure-unit {
+  padding: 11px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.measure-unit-static {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.measure-form .btn {
+  margin-top: 12px;
+}
+
+.series-stack {
+  margin-top: 20px;
+}
+
+.series {
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+}
+
+.series h3 {
+  margin: 0;
+}
+
+.series-latest {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  font-size: 0.95rem;
+}
+
+.spark {
+  display: block;
+  width: 100%;
+  height: 56px;
+  margin: 10px 0 6px;
+  overflow: visible;
+}
+
+.series-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  font-size: 0.82rem;
+}
+
+.series-list li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: baseline;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+.series-list li:last-child {
+  border-bottom: none;
+}
+
+.series-list .mono {
+  font-variant-numeric: tabular-nums;
+}
