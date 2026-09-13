@@ -664,3 +664,229 @@ a {
   cursor: pointer;
   text-align: left;
 }
+
+/* --- condition picker ---------------------------------------------------- */
+
+.search-wrap {
+  position: relative;
+  margin-bottom: 10px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 38px 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px; /* below 16px iOS zooms the WebView on focus */
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  background: var(--surface);
+}
+
+.search-input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.search-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--text-faint);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+  border-radius: 999px;
+  padding: 6px 11px;
+  font: inherit;
+  font-size: 0.78rem;
+  line-height: 1.2;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.chip-on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+
+.chip-static {
+  cursor: default;
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.chip-removable {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.selected-bar {
+  margin: 14px 0 10px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  font-size: 0.85rem;
+}
+
+.condition-list {
+  margin-top: 14px;
+  /* Cap the list rather than the page: 117 rows is a very long scroll, and
+     a contained one keeps the Save button reachable. */
+  max-height: 58vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 2px;
+}
+
+.choice-detail {
+  display: block;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+
+.choice-relevance {
+  display: block;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.choice-source {
+  display: block;
+  margin-top: 6px;
+  color: var(--accent);
+  font-size: 0.78rem;
+}
+
+.empty-state {
+  margin-top: 16px;
+  padding: 20px 16px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  text-align: center;
+}
+
+.empty-state p {
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+}
+
+/* --- plan detail --------------------------------------------------------- */
+
+.plan-item {
+  display: block;
+}
+
+.plan-trigger {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.plan-chevron {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  color: var(--text-faint);
+  font-size: 1.1rem;
+}
+
+.plan-detail {
+  margin: 12px 0 2px 46px;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.plan-detail h3 {
+  margin: 14px 0 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.plan-detail p {
+  margin: 0 0 4px;
+}
+
+.plan-detail-lead {
+  font-weight: 550;
+  color: var(--text);
+}
+
+.plan-steps {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+.plan-steps li {
+  margin-bottom: 4px;
+}
+
+.plan-source-link {
+  display: inline-block;
+  margin-top: 14px;
+  font-size: 0.78rem;
+  color: var(--accent);
+}
+
+.notice.warn-soft {
+  background: var(--gold-soft);
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--gold) 35%, transparent);
+  margin-top: 14px;
+}
+
+@media (max-width: 380px) {
+  .plan-detail {
+    margin-left: 0;
+  }
+}

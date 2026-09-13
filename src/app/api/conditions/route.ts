@@ -1,4 +1,4 @@
-import { sanitizeConditionKeys } from '@/lib/conditions';
+import { sanitizeConditionIds } from '@/lib/conditions';
 import { hasActiveConsent, setSelections } from '@/lib/repo';
 import { buildState } from '@/lib/state';
 import { fail, ok, readJson, requireUser, serverError } from '@/lib/api';
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     }
 
     const body = await readJson(request);
-    const keys = sanitizeConditionKeys(body.keys);
+    const keys = sanitizeConditionIds(body.keys);
 
     await setSelections(user.id, keys);
     return ok({ state: await buildState(user) });

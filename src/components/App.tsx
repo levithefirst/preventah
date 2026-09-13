@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toBaseUnits } from '@/lib/config';
-import type { ConditionKey } from '@/lib/conditions';
+import type { ConditionId } from '@/lib/conditions';
 import type { AppState } from '@/lib/state';
 import { api, type ApiResult } from '@/lib/api-client';
 import {
@@ -218,7 +218,7 @@ export default function App() {
     setBusy(null);
   }, []);
 
-  const saveConditions = useCallback(async (keys: ConditionKey[]) => {
+  const saveConditions = useCallback(async (keys: ConditionId[]) => {
     setBusy('conditions');
     const result = await api('/api/conditions', {
       method: 'POST',

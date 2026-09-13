@@ -9,7 +9,7 @@ import {
   WINDOW_DAYS,
   formatUsdt,
 } from './config';
-import type { ConditionKey } from './conditions';
+import type { ConditionId } from './conditions';
 import { daysUntilInclusive, toIsoDate, todayIso } from './dates';
 import { calendarDayIndex, dayIndexSince, getDailyPlan, type DailyPlan } from './plans';
 import {
@@ -27,7 +27,7 @@ export interface AppState {
   address: string;
   hasConsent: boolean;
   consentVersion: string;
-  selections: ConditionKey[];
+  selections: ConditionId[];
   plan: DailyPlan;
   activeStake: ActiveStakeView | null;
   history: StakeHistoryView[];

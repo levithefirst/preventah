@@ -1,7 +1,7 @@
 import 'server-only';
 import { db } from './db';
 import { CONSENT_VERSION, TARGET_DAYS, WINDOW_DAYS } from './config';
-import type { ConditionKey } from './conditions';
+import type { ConditionId } from './conditions';
 
 /**
  * Data access layer. Every function here takes already-validated input;
@@ -73,18 +73,18 @@ export async function revokeConsentAndErase(userId: string): Promise<void> {
 // Condition selections
 // --------------------------------------------------------------------------
 
-export async function getSelections(userId: string): Promise<ConditionKey[]> {
+export async function getSelections(userId: string): Promise<ConditionId[]> {
   const sql = db();
   const rows = (await sql`
     SELECT category_key FROM condition_selections WHERE user_id = ${userId}
-  `) as { category_key: ConditionKey }[];
+  `) as { category_key: ConditionId }[];
   return rows.map((r) => r.category_key);
 }
 
 /** Replaces the user's selection set. Caller must have checked consent. */
 export async function setSelections(
   userId: string,
-  keys: readonly ConditionKey[],
+  keys: readonly ConditionId[],
 ): Promise<void> {
   const sql = db();
   await sql`DELETE FROM condition_selections WHERE user_id = ${userId}`;
