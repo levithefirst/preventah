@@ -113,3 +113,69 @@ test('month and year boundaries roll correctly', () => {
   // Leap day.
   assert.equal(addUtcDays('2028-02-28', 1), '2028-02-29');
 });
+
+// --- commitment window bound ----------------------------------------------
+
+test('a check-in inside the window is allowed, on both boundaries', async () => {
+  const { isWithinCommitmentWindow } = await import('../src/lib/dates.ts');
+  const start = '2026-09-12';
+  const end = '2026-09-18';
+
+  assert.equal(isWithinCommitmentWindow(start, start, end), true, 'first day');
+  assert.equal(isWithinCommitmentWindow('2026-09-15', start, end), true);
+  assert.equal(isWithinCommitmentWindow(end, start, end), true, 'last day');
+});
+
+// A stake stays 'active' until the daily job settles it, so without this
+// bound a late check-in would still count toward target_days and turn a
+// missed window into a paid reward.
+test('a check-in after the window closes is rejected', async () => {
+  const { isWithinCommitmentWindow } = await import('../src/lib/dates.ts');
+  assert.equal(
+    isWithinCommitmentWindow('2026-09-19', '2026-09-12', '2026-09-18'),
+    false,
+  );
+  assert.equal(
+    isWithinCommitmentWindow('2026-10-01', '2026-09-12', '2026-09-18'),
+    false,
+  );
+});
+
+test('a check-in before the window opens is rejected', async () => {
+  const { isWithinCommitmentWindow } = await import('../src/lib/dates.ts');
+  assert.equal(
+    isWithinCommitmentWindow('2026-09-11', '2026-09-12', '2026-09-18'),
+    false,
+  );
+});
+
+test('the window bound accepts timestamp-shaped values too', async () => {
+  const { isWithinCommitmentWindow } = await import('../src/lib/dates.ts');
+  // started_at is a timestamptz and ends_on came back as a timestamp before
+  // the to_char fix; neither shape may silently disable the bound.
+  assert.equal(
+    isWithinCommitmentWindow(
+      '2026-09-15T09:30:00.000Z',
+      '2026-09-12T14:25:15.303Z',
+      '2026-09-18T00:00:00.000Z',
+    ),
+    true,
+  );
+  assert.equal(
+    isWithinCommitmentWindow(
+      '2026-09-19T00:00:01.000Z',
+      '2026-09-12T14:25:15.303Z',
+      '2026-09-18T00:00:00.000Z',
+    ),
+    false,
+  );
+});
+
+test('an unreadable date fails closed rather than open', async () => {
+  const { isWithinCommitmentWindow } = await import('../src/lib/dates.ts');
+  for (const bad of [null, undefined, '', 'nonsense', {}, NaN]) {
+    assert.equal(isWithinCommitmentWindow(bad, '2026-09-12', '2026-09-18'), false);
+    assert.equal(isWithinCommitmentWindow('2026-09-15', bad, '2026-09-18'), false);
+    assert.equal(isWithinCommitmentWindow('2026-09-15', '2026-09-12', bad), false);
+  }
+});

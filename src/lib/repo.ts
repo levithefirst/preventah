@@ -274,23 +274,55 @@ export async function getCheckinDates(stakeId: string): Promise<string[]> {
   return rows.map((r) => r.d);
 }
 
+/** Why a check-in attempt did or did not produce a row. */
+export type CheckinOutcome =
+  | 'recorded'
+  | 'already_checked_in'
+  | 'outside_window';
+
 /**
- * Records today's check-in.
- * Returns false when one already existed for today; the UNIQUE constraint,
- * not application logic, is what enforces that.
+ * Records today's check-in, bounded to the commitment window.
+ *
+ * The window bound lives inside the INSERT so it is evaluated atomically
+ * with the write. A stake stays 'active' until the daily settlement job
+ * runs, which can be up to 24 hours after its window closes; without this
+ * bound a check-in in that gap would still count toward target_days and
+ * convert a missed window into a paid reward.
+ *
+ * Duplicate protection remains the UNIQUE (stake_id, checkin_date)
+ * constraint rather than a read-then-write.
  */
 export async function addCheckin(
   stakeId: string,
   userId: string,
-): Promise<boolean> {
+): Promise<CheckinOutcome> {
   const sql = db();
-  const rows = (await sql`
+
+  const inserted = (await sql`
     INSERT INTO checkins (stake_id, user_id, checkin_date)
-    VALUES (${stakeId}::uuid, ${userId}::uuid, (now() AT TIME ZONE 'utc')::date)
+    SELECT s.id, s.user_id, (now() AT TIME ZONE 'utc')::date
+      FROM stakes s
+     WHERE s.id = ${stakeId}::uuid
+       AND s.user_id = ${userId}::uuid
+       AND s.status = 'active'
+       AND (now() AT TIME ZONE 'utc')::date >= (s.started_at AT TIME ZONE 'utc')::date
+       AND (now() AT TIME ZONE 'utc')::date <= s.ends_on
     ON CONFLICT (stake_id, checkin_date) DO NOTHING
     RETURNING id
   `) as { id: string }[];
-  return rows.length > 0;
+
+  if (inserted.length > 0) return 'recorded';
+
+  // No row written: either today is already recorded, or the attempt fell
+  // outside the window. Distinguish so the user gets an accurate message.
+  const existing = (await sql`
+    SELECT 1 FROM checkins
+     WHERE stake_id = ${stakeId}::uuid
+       AND checkin_date = (now() AT TIME ZONE 'utc')::date
+     LIMIT 1
+  `) as unknown[];
+
+  return existing.length > 0 ? 'already_checked_in' : 'outside_window';
 }
 
 // --------------------------------------------------------------------------

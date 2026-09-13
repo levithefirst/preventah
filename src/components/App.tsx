@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { toBaseUnits } from '@/lib/config';
 import type { ConditionKey } from '@/lib/conditions';
 import type { AppState } from '@/lib/state';
+import { api, type ApiResult } from '@/lib/api-client';
 import {
   WalletError,
   connectEvmAccount,
@@ -21,28 +22,6 @@ import CommitmentCard from './CommitmentCard';
 import HistoryCard from './HistoryCard';
 
 type Phase = 'booting' | 'connect' | 'ready';
-
-interface ApiResult {
-  ok: boolean;
-  error?: string;
-  state?: AppState;
-  pending?: boolean;
-  /** Why a stake is still pending, straight from the on-chain verdict. */
-  reason?: string | null;
-  alreadyCheckedIn?: boolean;
-}
-
-async function api(path: string, init?: RequestInit): Promise<ApiResult> {
-  const response = await fetch(path, {
-    ...init,
-    headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) },
-  });
-  try {
-    return (await response.json()) as ApiResult;
-  } catch {
-    return { ok: false, error: 'The server sent an unreadable response.' };
-  }
-}
 
 /** How long to keep polling a pending stake before telling the user to wait. */
 const VERIFY_POLL_MS = 5000;
@@ -80,6 +59,9 @@ export default function App() {
         setState(result.state);
         setPhase('ready');
       } else {
+        // A 401 here is the normal "not signed in yet" case and must stay
+        // silent. Only surface a failure that never reached the server.
+        if (result.offline && result.error) setError(result.error);
         setPhase('connect');
       }
     })();

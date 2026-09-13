@@ -82,3 +82,26 @@ export function daysUntilInclusive(
 
   return Math.max(0, Math.round((end - today) / MS_PER_DAY) + 1);
 }
+
+/**
+ * Whether a calendar day falls inside a commitment window, inclusive of
+ * both ends.
+ *
+ * A stake stays 'active' until the daily settlement job runs, which can be
+ * up to 24 hours after its window closes. Without this bound a check-in
+ * recorded in that gap still counts toward target_days, turning a missed
+ * window into a paid reward. The database enforces the same rule inside the
+ * INSERT; this is the readable statement of it.
+ */
+export function isWithinCommitmentWindow(
+  day: unknown,
+  startsOn: unknown,
+  endsOn: unknown,
+): boolean {
+  const today = toIsoDate(day);
+  const start = toIsoDate(startsOn);
+  const end = toIsoDate(endsOn);
+  if (today === null || start === null || end === null) return false;
+  // ISO date strings compare correctly as plain strings.
+  return today >= start && today <= end;
+}

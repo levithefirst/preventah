@@ -28,11 +28,18 @@ export async function POST() {
       return fail('This commitment is no longer accepting check-ins.', 409);
     }
 
-    const recorded = await addCheckin(stake.id, user.id);
+    const outcome = await addCheckin(stake.id, user.id);
+
+    if (outcome === 'outside_window') {
+      return fail(
+        'Today falls outside your commitment window, so it cannot be counted.',
+        409,
+      );
+    }
 
     return ok({
       state: await buildState(user),
-      alreadyCheckedIn: !recorded,
+      alreadyCheckedIn: outcome === 'already_checked_in',
     });
   } catch (error) {
     return serverError('checkin', error);

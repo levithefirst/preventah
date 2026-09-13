@@ -6,6 +6,11 @@ get back for showing up.
 
 Built for the Nimiq Mini Apps Competition, Cycle II.
 
+**Open it in Nimiq Pay:**
+<https://nimpay.app/miniapps/open/preventah-nimiq.vercel.app>
+
+Production: <https://preventah-nimiq.vercel.app>
+
 ---
 
 ## What it does
@@ -23,7 +28,26 @@ Built for the Nimiq Mini Apps Competition, Cycle II.
 
 **Miss the target and your stake is still returned in full.** Preventah never
 keeps a deposit. The reward is the only thing at stake, which keeps this a
-commitment device rather than anything resembling a wager.
+commitment device rather than anything resembling a wager. Nothing about the
+outcome is random: the reward is a fixed 5% (`REWARD_BPS=500`), so a
+successful 1 USDT commitment returns exactly 1.05 USDT.
+
+## Custody, in plain terms
+
+Be clear-eyed about this before staking anything:
+
+- **Preventah never asks for a private key or a seed phrase.** There is no
+  field for one, and no code path that would accept one. Signing and payment
+  happen entirely inside Nimiq Pay's own wallet UI.
+- **The escrow wallet is project-controlled and custodial.** While a
+  commitment is running, your 1 USDT sits in a wallet the project holds the
+  key to. You are trusting the operator to return it.
+- **That key lives only in Vercel's environment**, is read by one server-side
+  function, and is never logged, returned in a response, or shipped to the
+  browser.
+- Refunds and rewards are sent automatically by a daily job. They are not
+  discretionary, but they do depend on that job running and on the escrow
+  holding enough USDT and POL for gas.
 
 ---
 
@@ -39,6 +63,19 @@ Nimiq Pay exposes two providers, and Preventah uses both for distinct jobs:
 The wallet is not decorative: no plan can be committed to, no streak can
 start, and no payout can happen without a real on-chain USDT transfer
 confirmed from the user's Nimiq Pay wallet.
+
+| | |
+| --- | --- |
+| Chain | Polygon PoS, chain id `137` (`0x89`) |
+| Token | USDT (PoS), 6 decimals |
+| Contract | `0xc2132D05D31c914a87C6611C10748AEb04B58e8F` |
+| Commitment | 1 USDT (`NEXT_PUBLIC_STAKE_AMOUNT_USDT`) |
+| Reward | 5%, fixed (`REWARD_BPS=500`) |
+| Window | check in on 5 days out of 7 |
+
+The transaction is a plain ERC-20 `transfer` built with viem and handed to
+`eth_sendTransaction`. Nimiq Pay renders its own confirmation sheet; the app
+never builds one, and never sees a key.
 
 ---
 
@@ -118,8 +155,9 @@ be written into a file in this repository.
 ### Tests
 
 ```bash
-npm test        # plan table invariants
-npm run build   # production build + typecheck
+npm test        # plan table, date handling, on-chain verification rules
+npm run typecheck
+npm run build   # production build
 ```
 
 ---
@@ -130,10 +168,13 @@ npm run build   # production build + typecheck
 db/schema.sql              Postgres schema, idempotent
 src/lib/conditions.ts      The fixed six-category checklist
 src/lib/plans.ts           Deterministic plan table, pure and total
+src/lib/verify-rules.ts    Pure on-chain verification rules
+src/lib/dates.ts           Total date helpers, never throw
 src/lib/chain.ts           On-chain verification and payout
 src/lib/session.ts         Wallet-signature auth
 src/lib/repo.ts            Data access
 src/lib/wallet.ts          Client-side Nimiq Pay + EVM integration
+src/lib/api-client.ts      Total browser API client, never rejects
 src/app/api/               Route handlers
 src/components/            UI
 ```
