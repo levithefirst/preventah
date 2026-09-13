@@ -417,6 +417,7 @@ export default function App() {
       ) : state.selections.length === 0 ? (
         <ConditionsCard
           initial={state.selections}
+          labels={state.selectionLabels}
           busy={busy === 'conditions'}
           onSave={saveConditions}
         />
@@ -437,6 +438,7 @@ export default function App() {
           <ConditionsCard
             key={state.selections.join(',')}
             initial={state.selections}
+            labels={state.selectionLabels}
             busy={busy === 'conditions'}
             compact
             onSave={saveConditions}

@@ -9,7 +9,7 @@ import {
   WINDOW_DAYS,
   formatUsdt,
 } from './config';
-import type { ConditionId } from './conditions';
+import { labelFor, type ConditionId } from './conditions';
 import { daysUntilInclusive, toIsoDate, todayIso } from './dates';
 import {
   describeTrend,
@@ -44,6 +44,15 @@ export interface AppState {
   hasConsent: boolean;
   consentVersion: string;
   selections: ConditionId[];
+  /**
+   * Display names for `selections`, in the same order.
+   *
+   * Sent so the client's summary view can render without importing the
+   * catalog. The catalog is the largest piece of application data the
+   * browser ever loads, and most sessions never open the picker that
+   * needs it.
+   */
+  selectionLabels: string[];
   plan: DailyPlan;
   measurements: MeasurementSeries[];
   activeStake: ActiveStakeView | null;
@@ -193,6 +202,7 @@ export async function buildState(user: UserRow): Promise<AppState> {
     hasConsent: consent,
     consentVersion: CONSENT_VERSION,
     selections: effectiveSelections,
+    selectionLabels: effectiveSelections.map(labelFor),
     plan: getDailyPlan(effectiveSelections, planDayIndex),
     measurements,
     activeStake,
