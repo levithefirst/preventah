@@ -31,21 +31,48 @@ CREATE TABLE IF NOT EXISTS consents (
 CREATE INDEX IF NOT EXISTS consents_user_idx ON consents (user_id, granted_at DESC);
 
 -- ---------------------------------------------------------------------------
--- condition_selections: hereditary risk categories chosen from a fixed
--- checklist. category_key is constrained to the six supported keys, so no
--- free-text health information can ever land in this table.
+-- conditions: the catalog of family-health conditions a user may select.
+--
+-- This table exists to give condition_selections something to point at. It
+-- is not the source of truth: src/lib/condition-catalog.ts is, and
+-- scripts/db-init.mjs syncs this table from it on every run. Storing name
+-- and category here is purely so the database is readable on its own.
+--
+-- Rows are never deleted. An id that leaves the catalog is stamped with
+-- retired_at instead, so a selection written months ago still resolves and
+-- the foreign key below can never be orphaned.
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS conditions (
+  id          text PRIMARY KEY,
+  name        text NOT NULL,
+  category    text NOT NULL,
+  retired_at  timestamptz,
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  updated_at  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS conditions_category_idx ON conditions (category);
+
+-- ---------------------------------------------------------------------------
+-- condition_selections: the conditions a user has told us run in their
+-- family.
+--
+-- category_key holds a conditions.id. The name is historical: it was a
+-- six-value CHECK before the catalog existed, and renaming a live column
+-- buys nothing worth the risk of an old deployment writing to it mid-flight.
+--
+-- The foreign key (added by scripts/db-init.mjs, which can seed conditions
+-- first) is what keeps free-text health data structurally impossible here.
+-- An arbitrary string is a constraint violation in Postgres itself, not
+-- something application code has to remember to check.
+--
+-- UNIQUE (user_id, category_key) makes a duplicate selection a database
+-- error rather than an application concern.
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS condition_selections (
   id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id       uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  category_key  text NOT NULL CHECK (category_key IN (
-                  'cardiovascular',
-                  'type2_diabetes',
-                  'cancer_family_history',
-                  'hypertension',
-                  'metabolic_syndrome',
-                  'osteoporosis'
-                )),
+  category_key  text NOT NULL,
   created_at    timestamptz NOT NULL DEFAULT now(),
   UNIQUE (user_id, category_key)
 );

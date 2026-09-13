@@ -10,8 +10,8 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "db:init": "node --env-file=.env.local scripts/db-init.mjs",
-    "test": "node --import ./tests/register.mjs --test \"tests/**/*.test.mjs\""
+    "db:init": "node --env-file=.env.local --import ./scripts/register.mjs scripts/db-init.mjs",
+    "test": "node --import ./scripts/register.mjs --test \"tests/**/*.test.mjs\""
   },
   "dependencies": {
     "@neondatabase/serverless": "1.1.0",

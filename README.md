@@ -17,8 +17,9 @@ Production: <https://preventah-nimiq.vercel.app>
 
 1. **Consent.** Before anything health-related is stored, you read exactly
    what is kept and tick a box. No silent collection.
-2. **Pick your risk categories** from a fixed checklist of six hereditary
-   conditions. There is no free-text input anywhere in the app.
+2. **Pick what runs in your family** from a searchable catalog of 117
+   conditions across 13 categories. Everything is chosen from the list;
+   there is no free-text input anywhere in the app.
 3. **Get today's plan**: one diet change, one piece of movement, one habit,
    resolved from a static rules table keyed to your selections.
 4. **Stake USDT** on Polygon through your Nimiq Pay wallet. Nimiq Pay shows
@@ -102,8 +103,10 @@ The app custodies real user funds, so a few things are deliberate:
   returned, and lives only in the Vercel dashboard. Modules that touch secrets
   import `server-only`, so a stray client import fails the build rather than
   shipping a key to the browser.
-- **Free-text health data is impossible to store.** `category_key` is
-  `CHECK`-constrained to the six supported keys in Postgres itself.
+- **Free-text health data is impossible to store.** Selections are a foreign
+  key into a `conditions` table seeded from the catalog, so an arbitrary
+  string is a constraint violation in Postgres itself rather than something
+  application code has to remember to check.
 
 ---
 
@@ -112,7 +115,7 @@ The app custodies real user funds, so a few things are deliberate:
 Preventah stores the minimum it needs to work:
 
 - Your wallet address
-- Which of the six categories you ticked, as short codes
+- Which catalog conditions you ticked, as short codes
 - Your stake, and which days you checked in
 
 It never asks for your name, date of birth, email, symptoms, diagnoses, which
@@ -165,8 +168,12 @@ npm run build   # production build
 ## Project layout
 
 ```
-db/schema.sql              Postgres schema, idempotent
-src/lib/conditions.ts      The fixed six-category checklist
+db/schema.sql                Postgres schema, idempotent
+scripts/db-init.mjs          Schema, catalog sync and migration, all idempotent
+src/lib/condition-types.ts   Category and plan-tag vocabulary
+src/lib/condition-catalog.ts 117 conditions with sources and plan tags
+src/lib/condition-index.ts   Lookup and deterministic search
+src/lib/conditions.ts        Selection validation at the trust boundary
 src/lib/plans.ts           Deterministic plan table, pure and total
 src/lib/verify-rules.ts    Pure on-chain verification rules
 src/lib/dates.ts           Total date helpers, never throw
