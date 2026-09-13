@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 232 64" width="232" height="64" role="img" aria-label="Preventah">
+  <title>Preventah</title>
+  <!--
+    Mark plus wordmark, for share cards, README headers and anywhere outside
+    the app that cannot run React.
+
+    The word is live text with a fallback stack rather than outlines, so it
+    stays selectable and accurate. Renderers without Bricolage Grotesque will
+    substitute a bold grotesque, which is a graceful degradation. Inside the
+    product, use the Logo component instead: it has the real webfont loaded
+    and will always set this correctly.
+  -->
+  <defs>
+    <clipPath id="pv-lockup-front">
+      <rect x="2" y="2" width="52" height="52" rx="14" />
+    </clipPath>
+  </defs>
+
+  <rect x="6" y="6" width="52" height="52" rx="14" fill="#E8B4B8" />
+  <rect x="2" y="2" width="52" height="52" rx="14" fill="#F6F1E8" />
+
+  <g clip-path="url(#pv-lockup-front)">
+    <rect x="2" y="2" width="52" height="12" fill="#B7D9C2" />
+    <g stroke="#8FC4A3" stroke-width="1" opacity="0.5">
+      <path d="M10.5 2v12M19 2v12M27.5 2v12M36 2v12M44.5 2v12" />
+      <path d="M2 7.5h52" />
+    </g>
+  </g>
+
+  <rect x="2" y="2" width="52" height="52" rx="14" fill="none" stroke="#141414" stroke-width="2.5" />
+  <path d="M2 14h52" stroke="#141414" stroke-width="2.5" />
+
+  <path
+    fill="#141414"
+    fill-rule="evenodd"
+    d="M16 21h15.5a8.5 8.5 0 0 1 0 17h-7v9H16V21Zm8.5 5h6.5a3.5 3.5 0 0 1 0 7h-6.5v-7Z"
+  />
+
+  <text
+    x="70"
+    y="41"
+    fill="#141414"
+    font-family="'Bricolage Grotesque', 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif"
+    font-size="30"
+    font-weight="800"
+    letter-spacing="-0.6"
+  >Preventah</text>
+</svg>

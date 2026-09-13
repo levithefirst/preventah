@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Preventah">
+  <title>Preventah</title>
+  <!--
+    Monochrome stamp. The mint fill drops away and the offset plate survives
+    as a thin outline, so the mark still says "one step ahead" when it is
+    embossed, printed in one colour, or sitting on ink.
+
+    The back plate is deliberately hairline. At full weight it stops reading
+    as a second sheet and starts reading as a drop shadow, which this system
+    does not use.
+  -->
+  <g fill="none" stroke="currentColor">
+    <rect x="6" y="6" width="52" height="52" rx="14" stroke-width="1.5" opacity="0.5" />
+    <rect x="2" y="2" width="52" height="52" rx="14" stroke-width="2.5" />
+    <path d="M2 14h52" stroke-width="2.5" />
+  </g>
+  <path
+    fill="currentColor"
+    fill-rule="evenodd"
+    d="M16 21h15.5a8.5 8.5 0 0 1 0 17h-7v9H16V21Zm8.5 5h6.5a3.5 3.5 0 0 1 0 7h-6.5v-7Z"
+  />
+</svg>
