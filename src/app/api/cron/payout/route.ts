@@ -1,4 +1,4 @@
-import { formatUsdt, STAKE_AMOUNT_USDT, toBaseUnits } from '@/lib/config';
+import { formatUsdt, rewardBaseUnits } from '@/lib/config';
 import { escrowUsdtBalance, sendUsdt, verifyStakeTransaction } from '@/lib/chain';
 import { cronSecret, rewardBps } from '@/lib/server-env';
 import {
@@ -56,13 +56,13 @@ async function run(request: Request): Promise<NextResponse> {
   };
 
   // --- Phase 1: confirm pending stakes -------------------------------------
-  const expectedAmount = toBaseUnits(STAKE_AMOUNT_USDT);
   for (const stake of await getPendingStakes(PENDING_SWEEP_LIMIT)) {
     try {
       const verdict = await verifyStakeTransaction(
         stake.stake_tx_hash,
         stake.wallet_address,
-        expectedAmount,
+        // Each stake is checked against its own recorded amount.
+        stake.amount_base,
       );
       if (verdict.ok) {
         await activateStake(stake.id, verdict.amountBase);
@@ -93,7 +93,7 @@ async function run(request: Request): Promise<NextResponse> {
 
     for (const stake of claimed) {
       const targetMet = stake.checkin_count >= stake.target_days;
-      const reward = targetMet ? (stake.amount_base * bps) / 10_000n : 0n;
+      const reward = targetMet ? rewardBaseUnits(stake.amount_base, bps) : 0n;
       const total = stake.amount_base + reward;
 
       // Refuse to broadcast a transfer the escrow cannot cover. The stake

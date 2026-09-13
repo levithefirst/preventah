@@ -26,9 +26,15 @@ export const ESCROW_WALLET_ADDRESS = (
   process.env.NEXT_PUBLIC_ESCROW_WALLET_ADDRESS ?? ''
 ).toLowerCase();
 
-/** Default commitment size, in whole USDT. */
+/**
+ * Default commitment size for a NEW stake, in whole USDT.
+ *
+ * Only new commitments read this. An existing stake is always settled and
+ * re-verified against the amount_base recorded on its own row, so changing
+ * this never reprices a commitment somebody already paid.
+ */
 export const STAKE_AMOUNT_USDT = Number(
-  process.env.NEXT_PUBLIC_STAKE_AMOUNT_USDT ?? 1,
+  process.env.NEXT_PUBLIC_STAKE_AMOUNT_USDT ?? 0.1,
 );
 
 /** Commitment shape: check in on 5 separate days inside a 7-day window. */
@@ -59,4 +65,20 @@ export function formatUsdt(base: bigint | string | number): string {
   // Trim trailing zeros but always keep at least two decimal places.
   const trimmed = frac.replace(/0+$/, '').padEnd(2, '0');
   return `${negative ? '-' : ''}${whole}.${trimmed}`;
+}
+
+/**
+ * Reward for a commitment, in integer base units.
+ *
+ * Deliberately takes the stake's own recorded amount rather than reading
+ * STAKE_AMOUNT_USDT: a change to the default must never reprice a
+ * commitment somebody already paid for. Integer division throughout, so no
+ * rounding error can reach a balance.
+ */
+export function rewardBaseUnits(
+  stakeAmountBase: bigint,
+  bps: bigint,
+): bigint {
+  if (stakeAmountBase <= 0n || bps <= 0n) return 0n;
+  return (stakeAmountBase * bps) / 10_000n;
 }

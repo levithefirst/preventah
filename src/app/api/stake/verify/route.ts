@@ -1,4 +1,3 @@
-import { STAKE_AMOUNT_USDT, toBaseUnits } from '@/lib/config';
 import { verifyStakeTransaction } from '@/lib/chain';
 import { activateStake, getActiveStake, rejectStake } from '@/lib/repo';
 import { buildState } from '@/lib/state';
@@ -26,10 +25,12 @@ export async function POST() {
       return ok({ state: await buildState(user), pending: false });
     }
 
+    // The stake's own recorded amount, never the current default: a change
+    // to the default must not reprice a commitment already paid for.
     const verdict = await verifyStakeTransaction(
       stake.stake_tx_hash,
       stake.wallet_address,
-      toBaseUnits(STAKE_AMOUNT_USDT),
+      stake.amount_base,
     );
 
     if (verdict.ok) {

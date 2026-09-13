@@ -30,7 +30,7 @@ Production: <https://preventah-nimiq.vercel.app>
 keeps a deposit. The reward is the only thing at stake, which keeps this a
 commitment device rather than anything resembling a wager. Nothing about the
 outcome is random: the reward is a fixed 5% (`REWARD_BPS=500`), so a
-successful 1 USDT commitment returns exactly 1.05 USDT.
+successful 0.10 USDT commitment returns exactly 0.105 USDT.
 
 ## Custody, in plain terms
 
@@ -40,7 +40,7 @@ Be clear-eyed about this before staking anything:
   field for one, and no code path that would accept one. Signing and payment
   happen entirely inside Nimiq Pay's own wallet UI.
 - **The escrow wallet is project-controlled and custodial.** While a
-  commitment is running, your 1 USDT sits in a wallet the project holds the
+  commitment is running, your 0.10 USDT sits in a wallet the project holds the
   key to. You are trusting the operator to return it.
 - **That key lives only in Vercel's environment**, is read by one server-side
   function, and is never logged, returned in a response, or shipped to the
@@ -69,7 +69,7 @@ confirmed from the user's Nimiq Pay wallet.
 | Chain | Polygon PoS, chain id `137` (`0x89`) |
 | Token | USDT (PoS), 6 decimals |
 | Contract | `0xc2132D05D31c914a87C6611C10748AEb04B58e8F` |
-| Commitment | 1 USDT (`NEXT_PUBLIC_STAKE_AMOUNT_USDT`) |
+| Commitment | 0.10 USDT (`NEXT_PUBLIC_STAKE_AMOUNT_USDT`) |
 | Reward | 5%, fixed (`REWARD_BPS=500`) |
 | Window | check in on 5 days out of 7 |
 
@@ -146,7 +146,7 @@ Set these in the Vercel dashboard for a deployment. See `.env.example`.
 | `CRON_SECRET` | server | Guards `/api/cron/payout` |
 | `SESSION_SECRET` | server | Signs wallet-auth session cookies |
 | `POLYGON_RPC_URL` | server | Reading receipts, broadcasting payouts |
-| `NEXT_PUBLIC_STAKE_AMOUNT_USDT` | client | Stake size, defaults to 1 |
+| `NEXT_PUBLIC_STAKE_AMOUNT_USDT` | client | Stake size for new commitments, defaults to 0.10 |
 | `REWARD_BPS` | server | Reward in basis points, defaults to 500 (5%) |
 
 `ESCROW_PRIVATE_KEY` must never be prefixed with `NEXT_PUBLIC_` and must never
