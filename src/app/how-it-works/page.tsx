@@ -25,7 +25,7 @@ export default function Page() {
         title="Six steps, start to settlement."
         lede="Nothing here is generated at request time. The plan is resolved from a curated table, the streak is counted in the database, and the settlement runs on a schedule."
       >
-        <HowItWorks />
+        <HowItWorks headingAs="h2" />
         <div style={{ marginTop: 32 }}>
           <CtaRow />
         </div>

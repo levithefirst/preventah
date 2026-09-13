@@ -17,7 +17,7 @@ export default function Page() {
         title="Consent first, and the minimum after that."
         lede="Preventah holds health information, so the rules about it are worth stating plainly rather than burying in a policy nobody reads."
       >
-        <SafetyList />
+        <SafetyList headingAs="h2" />
       </Section>
 
       <Section

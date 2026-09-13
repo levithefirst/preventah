@@ -16,14 +16,14 @@ import type { PlanItemType } from '@/lib/plan-content';
  *  number on a marketing page would ship 117 conditions to every visitor. */
 export const CONDITION_COUNT_PUBLIC = 117;
 
-export function WhatItIs() {
+export function WhatItIs({ headingAs: H = 'h3' }: { headingAs?: 'h2' | 'h3' }) {
   return (
     <div className="pv-grid pv-grid-3">
       <Window offset size="roomy">
         <span className="pv-step-num" aria-hidden="true">
           1
         </span>
-        <h3 style={{ marginTop: 14 }}>Family history</h3>
+        <H style={{ marginTop: 14 }}>Family history</H>
         <p className="muted" style={{ marginTop: 8 }}>
           Pick from a searchable catalog of {CONDITION_COUNT_PUBLIC}{' '}
           conditions. Everything is chosen from the list. There is no free-text
@@ -36,7 +36,7 @@ export function WhatItIs() {
         <span className="pv-step-num" aria-hidden="true">
           2
         </span>
-        <h3 style={{ marginTop: 14 }}>A deterministic plan</h3>
+        <H style={{ marginTop: 14 }}>A deterministic plan</H>
         <p className="muted" style={{ marginTop: 8 }}>
           One diet change, one bit of movement, one habit each day, resolved
           from a curated table. No model call, nothing generated at request
@@ -48,7 +48,7 @@ export function WhatItIs() {
         <span className="pv-step-num" aria-hidden="true">
           3
         </span>
-        <h3 style={{ marginTop: 14 }}>A reason to come back</h3>
+        <H style={{ marginTop: 14 }}>A reason to come back</H>
         <p className="muted" style={{ marginTop: 8 }}>
           A real USDT commitment on Polygon, approved in Nimiq Pay. Hit the
           target and it returns with a reward. Miss it and it still returns, in
@@ -86,7 +86,7 @@ const STEPS = [
   },
 ];
 
-export function HowItWorks() {
+export function HowItWorks({ headingAs: H = 'h3' }: { headingAs?: 'h2' | 'h3' }) {
   return (
     <ol className="pv-steps-list">
       {STEPS.map((step, index) => (
@@ -95,7 +95,7 @@ export function HowItWorks() {
             {index + 1}
           </span>
           <div>
-            <h3>{step.title}</h3>
+            <H>{step.title}</H>
             <p className="muted" style={{ marginTop: 6 }}>
               {step.body}
             </p>
@@ -228,11 +228,11 @@ export function ProgressPreview() {
   );
 }
 
-export function SafetyList() {
+export function SafetyList({ headingAs: H = 'h3' }: { headingAs?: 'h2' | 'h3' }) {
   return (
     <div className="pv-grid">
       <Window size="roomy">
-        <h3>What is stored</h3>
+        <H>What is stored</H>
         <ul className="pv-plain-list" style={{ marginTop: 12 }}>
           <li>Your wallet address.</li>
           <li>Which catalog conditions you ticked, as short codes.</li>
@@ -244,7 +244,7 @@ export function SafetyList() {
       </Window>
 
       <Window size="roomy">
-        <h3>What is never asked for</h3>
+        <H>What is never asked for</H>
         <ul className="pv-plain-list" style={{ marginTop: 12 }}>
           <li>Your name, date of birth or email.</li>
           <li>
@@ -261,7 +261,7 @@ export function SafetyList() {
       </Window>
 
       <Window offset size="roomy">
-        <h3>Consent comes first</h3>
+        <H>Consent comes first</H>
         <p className="muted" style={{ marginTop: 10 }}>
           Nothing health-related is written before you agree to it, and the
           server refuses the write rather than trusting the screen. Withdrawing
@@ -275,7 +275,7 @@ export function SafetyList() {
       </Window>
 
       <Window size="roomy">
-        <h3>Keys stay in Nimiq Pay</h3>
+        <H>Keys stay in Nimiq Pay</H>
         <p className="muted" style={{ marginTop: 10 }}>
           Preventah never asks for a private key or a seed phrase. There is no
           field for one and no code path that would accept one. Signing and

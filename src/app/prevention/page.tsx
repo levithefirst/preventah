@@ -20,7 +20,7 @@ export default function Page() {
       >
         <div className="pv-grid">
           <Window offset size="roomy">
-            <h3>Conditions carry tags</h3>
+            <h2>Conditions carry tags</h2>
             <p className="muted" style={{ marginTop: 10 }}>
               High blood pressure carries <code>diet-salt</code>,{' '}
               <code>activity</code>, <code>weight</code>, <code>alcohol</code>,{' '}
@@ -30,7 +30,7 @@ export default function Page() {
           </Window>
 
           <Window size="roomy">
-            <h3>Guidance carries the same tags</h3>
+            <h2>Guidance carries the same tags</h2>
             <p className="muted" style={{ marginTop: 10 }}>
               An item about keeping salt under a teaspoon carries{' '}
               <code>diet-salt</code>. When your tags and an item&rsquo;s tags
@@ -41,7 +41,7 @@ export default function Page() {
 
         <div style={{ marginTop: 24 }}>
           <Window size="roomy">
-            <h3>What this design buys</h3>
+            <h2>What this design buys</h2>
             <p className="muted" style={{ marginTop: 10 }}>
               {CONDITION_COUNT_PUBLIC} conditions share one body of guidance,
               so adding a condition is a data change rather than a writing job,

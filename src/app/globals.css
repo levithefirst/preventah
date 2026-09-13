@@ -194,6 +194,15 @@ a {
   text-underline-offset: 3px;
 }
 
+/* Standalone links inside a card body: a real target, not a 17px sliver. */
+.pv-source,
+.pv-cond-detail a,
+.pv-faq-body a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
 /* Captions and helper text. 4.8:1 on cream. */
 .muted {
   color: var(--color-ink-soft);
@@ -1149,6 +1158,14 @@ a {
   padding: var(--space-2) var(--space-4);
 }
 
+/* The lockup is a link home, so it gets a control-sized target too. */
+.pv-site-header-inner > a:first-child {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  flex-shrink: 0;
+}
+
 .pv-site-nav {
   display: none;
   gap: var(--space-5);
@@ -1156,6 +1173,9 @@ a {
 }
 
 .pv-site-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   font-size: var(--text-ui);
   font-weight: 600;
   text-decoration: none;
@@ -1335,10 +1355,31 @@ a {
   line-height: 1.6;
 }
 
-.pv-sample-tag {
-  color: var(--color-muted);
+/*
+  Caption text sitting directly on the lavender canvas rather than on a cream
+  sheet.
+
+  --color-muted is calibrated against cream, where it is a comfortable 4.8:1.
+  On the canvas it drops to 3.05:1 and fails AA, so anything outside a window
+  steps up to ink-soft, which clears 5.9:1 on lavender and is still a
+  secondary weight on cream.
+*/
+.pv-sample-tag,
+.pv-hero .faint,
+.pv-section > .faint {
+  color: var(--color-ink-soft);
   font-size: var(--text-caption);
   margin-top: var(--space-3);
+}
+
+/*
+  ...but inside a window the sheet is cream again, so the caption goes back
+  to the quieter token. Same specificity as the rule above, declared after,
+  so it wins for anything on a sheet.
+*/
+.pv-window .faint {
+  color: var(--color-muted);
+  margin-top: 0;
 }
 
 /* --- public breakpoints --- */
@@ -1757,6 +1798,7 @@ a {
 
 /* Keyboard users get to the content without tabbing the whole nav. */
 .pv-skip {
+  display: inline-block;
   position: absolute;
   left: -9999px;
   top: 0;
@@ -1778,8 +1820,25 @@ a {
   margin: 0;
   padding: 0;
   font-size: var(--text-ui);
-  line-height: 1.7;
+  line-height: 1.5;
   opacity: 0.85;
+}
+
+/*
+  Links in lists are inline-block so their vertical padding actually creates
+  height. An inline anchor ignores it, which left every footer link a 17px
+  tap target on a phone.
+*/
+.pv-footer-list li {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.pv-footer-list a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
 }
 
 .pv-plain-list {

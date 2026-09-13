@@ -103,9 +103,9 @@ export function SiteFooter() {
           </div>
 
           <div>
-            <h3 className="label" style={{ marginBottom: 12 }}>
+            <h2 className="label" style={{ marginBottom: 12 }}>
               Product
-            </h3>
+            </h2>
             <ul className="pv-footer-list">
               {NAV_LINKS.map((link) => (
                 <li key={link.href}>
@@ -116,9 +116,9 @@ export function SiteFooter() {
           </div>
 
           <div>
-            <h3 className="label" style={{ marginBottom: 12 }}>
+            <h2 className="label" style={{ marginBottom: 12 }}>
               Built with
-            </h3>
+            </h2>
             <ul className="pv-footer-list">
               <li>Nimiq Pay, a self-custodial payments app</li>
               <li>USDT, a US dollar&ndash;pegged token, on Polygon</li>
