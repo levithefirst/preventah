@@ -20,12 +20,17 @@ Production: <https://preventah-nimiq.vercel.app>
 2. **Pick what runs in your family** from a searchable catalog of 117
    conditions across 13 categories. Everything is chosen from the list;
    there is no free-text input anywhere in the app.
-3. **Get today's plan**: one diet change, one piece of movement, one habit,
-   resolved from a static rules table keyed to your selections.
+3. **Get today's plan**: one diet change, one piece of movement, one habit.
+   Tap any of them for why it matters, what to do, what it may support, a
+   target you could check tonight, and a source.
 4. **Stake USDT** on Polygon through your Nimiq Pay wallet. Nimiq Pay shows
    its own native confirmation sheet.
 5. **Check in daily.** Hit 5 check-ins out of 7 days and the daily settlement
    job returns your stake with a reward on top.
+6. **Track what you like**, optionally: weight, waist, blood pressure,
+   resting heart rate, blood glucose, sleep. Every number is one you typed.
+7. **Set a daily reminder** as a calendar entry, with no OAuth and no
+   notification permission.
 
 **Miss the target and your stake is still returned in full.** Preventah never
 keeps a deposit. The reward is the only thing at stake, which keeps this a
@@ -80,6 +85,44 @@ never builds one, and never sees a key.
 
 ---
 
+## How the guidance works
+
+117 conditions share one curated body of prevention guidance, because
+writing bespoke advice for each would be a content project with no end and
+a great deal of near-duplicate copy in it.
+
+The bridge is a small, closed tag vocabulary. A condition carries tags
+(`diet-salt`, `activity`, `bone-strength`, `screening`…), a plan item
+carries the same tags, and an item is shown when the two intersect. Nothing
+in the catalog names a plan item and nothing in the content names a
+condition, so adding a condition is a data change rather than a writing job.
+Tests assert the vocabulary is fully covered from both directions.
+
+Some conditions carry no dietary or exercise tag at all, an inherited
+retinal condition for instance. Those fall back to general prevention rather
+than inventing a connection that is not there.
+
+What the app deliberately does **not** do:
+
+- **No scoring, ranking or prediction.** Family-history relevance is used to
+  word a sentence, never to compute a risk number. Nothing here tells you
+  how likely you are to develop anything.
+- **No live AI.** Resolving a plan is a pure function of your selections and
+  the day index. There is no model call, nothing asynchronous, and the same
+  inputs always produce the same plan on the server and in the browser.
+- **No targets.** Measurement trends report which way a number moved and by
+  how much. They never say whether that is good.
+- **No diagnosis or treatment advice.** Several plan items carry a safety
+  note telling the reader to skip them: waist measurement is the wrong habit
+  to hand someone with a history of disordered eating, and fibre is not
+  universally good for every gut.
+
+Sources are authoritative public-health references (WHO, NHS, CDC,
+MedlinePlus/NIH), given so a reader can go further, not as a citation for a
+numeric claim, because the app makes no numeric claims.
+
+---
+
 ## Security model
 
 The app custodies real user funds, so a few things are deliberate:
@@ -106,7 +149,17 @@ The app custodies real user funds, so a few things are deliberate:
 - **Free-text health data is impossible to store.** Selections are a foreign
   key into a `conditions` table seeded from the catalog, so an arbitrary
   string is a constraint violation in Postgres itself rather than something
-  application code has to remember to check.
+  application code has to remember to check. Measurements are constrained
+  the same way: a fixed set of kinds and units, with a `CHECK` that keeps
+  blood pressure the only paired reading and its systolic above its
+  diastolic.
+- **Health writes are consent-gated server-side.** Both the conditions route
+  and the measurements route refuse to write without an active consent row
+  for the current `CONSENT_VERSION`. The client cannot bypass this by
+  skipping a screen.
+- **Deletion is scoped inside the statement.** Removing a measurement is
+  filtered by `user_id` in the `DELETE` itself, so a valid id belonging to
+  someone else finds nothing rather than being checked and then trusted.
 
 ---
 
@@ -116,14 +169,24 @@ Preventah stores the minimum it needs to work:
 
 - Your wallet address
 - Which catalog conditions you ticked, as short codes
+- Any measurements you chose to record: a number, a unit and a date
 - Your stake, and which days you checked in
 
 It never asks for your name, date of birth, email, symptoms, diagnoses, which
 relative, or any clinical detail. Family history is a yes-or-no flag.
-Withdrawing consent deletes your selections immediately; the consent record
-itself is retained, marked revoked, as an audit trail.
 
-Preventah gives general lifestyle guidance, not medical advice.
+**Preventah connects to nothing.** No wearable, no fitness tracker, no Apple
+Health, no Google Fit, no calendar account. Every number in the app is one
+you typed, and the reminder is a calendar file your device opens, not an
+integration with a token attached.
+
+Withdrawing consent deletes your selections and measurements immediately; the
+consent record itself is retained, marked revoked, as an audit trail. It never
+affects a commitment already running: your stake is still returned and you can
+still check in.
+
+Preventah gives general lifestyle guidance, not medical advice. It does not
+score, rank or predict anyone's risk, and it sets no targets.
 
 ---
 
@@ -174,16 +237,19 @@ src/lib/condition-types.ts   Category and plan-tag vocabulary
 src/lib/condition-catalog.ts 117 conditions with sources and plan tags
 src/lib/condition-index.ts   Lookup and deterministic search
 src/lib/conditions.ts        Selection validation at the trust boundary
-src/lib/plans.ts           Deterministic plan table, pure and total
-src/lib/verify-rules.ts    Pure on-chain verification rules
-src/lib/dates.ts           Total date helpers, never throw
-src/lib/chain.ts           On-chain verification and payout
-src/lib/session.ts         Wallet-signature auth
-src/lib/repo.ts            Data access
-src/lib/wallet.ts          Client-side Nimiq Pay + EVM integration
-src/lib/api-client.ts      Total browser API client, never rejects
-src/app/api/               Route handlers
-src/components/            UI
+src/lib/plan-content.ts      The curated guidance library, tagged not keyed
+src/lib/plans.ts             Tag-intersection resolver, pure and total
+src/lib/measurements.ts      Measurement kinds, units, ranges, validation
+src/lib/ics.ts               Calendar reminder builder
+src/lib/verify-rules.ts      Pure on-chain verification rules
+src/lib/dates.ts             Total date helpers, never throw
+src/lib/chain.ts             On-chain verification and payout
+src/lib/session.ts           Wallet-signature auth
+src/lib/repo.ts              Data access
+src/lib/wallet.ts            Client-side Nimiq Pay + EVM integration
+src/lib/api-client.ts        Total browser API client, never rejects
+src/app/api/                 Route handlers
+src/components/              UI
 ```
 
 ---
