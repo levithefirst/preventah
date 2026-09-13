@@ -11,9 +11,13 @@ import {
   detectHost,
   sendUsdtStake,
   signLoginMessage,
-  type HostInfo,
 } from '@/lib/wallet';
 import RenderErrorBoundary from './RenderErrorBoundary';
+import Window from './ui/Window';
+import Button from './ui/Button';
+import { Toasts, type ToastMessage } from './ui/Toast';
+import { ErrorNotice } from './ui/States';
+import { SiteHome } from './site/SiteHome';
 import Masthead from './Masthead';
 import ConsentCard from './ConsentCard';
 import ConditionsCard from './ConditionsCard';
@@ -23,7 +27,7 @@ import PlanCard from './PlanCard';
 import CommitmentCard from './CommitmentCard';
 import HistoryCard from './HistoryCard';
 
-type Phase = 'booting' | 'connect' | 'ready';
+type Phase = 'booting' | 'site' | 'connect' | 'ready';
 
 /** How long to keep polling a pending stake before telling the user to wait. */
 const VERIFY_POLL_MS = 5000;
@@ -31,11 +35,10 @@ const VERIFY_MAX_ATTEMPTS = 24;
 
 export default function App() {
   const [phase, setPhase] = useState<Phase>('booting');
-  const [host, setHost] = useState<HostInfo | null>(null);
   const [state, setState] = useState<AppState | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [flash, setFlash] = useState<string | null>(null);
+  const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
   const [pendingReason, setPendingReason] = useState<string | null>(null);
   const [verifyStalled, setVerifyStalled] = useState(false);
@@ -45,16 +48,31 @@ export default function App() {
   const pollRef = useRef<() => void>(() => {});
 
   // --- boot ---------------------------------------------------------------
+  //
+  // Two questions, asked at once rather than one after the other: which host
+  // are we in, and is there already a session?
+  //
+  // Serially this cost a public visitor up to 17.5 seconds of spinner (2.5s
+  // of SDK handshake, then a 15s API timeout) before any content appeared,
+  // for a request that was never going to be useful to them. In parallel,
+  // the host answer alone is enough to decide: outside Nimiq Pay there is no
+  // wallet to connect to, so the visitor gets the public site and the /api/me
+  // result is simply never read.
   useEffect(() => {
     let cancelled = false;
 
     (async () => {
+      const session = api('/api/me');
       const info = await detectHost();
       if (cancelled) return;
-      setHost(info);
+
+      if (!info.insideNimiqPay) {
+        setPhase('site');
+        return;
+      }
 
       // An existing session cookie means the wallet was already proved.
-      const result = await api('/api/me');
+      const result = await session;
       if (cancelled) return;
 
       if (result.ok && result.state) {
@@ -130,6 +148,22 @@ export default function App() {
   }, [state?.activeStake?.status, verifyStalled, schedulePoll]);
 
   // --- actions -------------------------------------------------------------
+
+  /**
+   * Queue a confirmation.
+   *
+   * Toasts replaced the old inline notice row, which pushed the page down
+   * and moved the button the user had just pressed out from under their
+   * thumb. Errors that block progress still render inline, in the card they
+   * belong to.
+   */
+  const toast = useCallback((text: string, tone: 'good' | 'error' = 'good') => {
+    setToasts((current) => [...current, { id: Date.now() + Math.random(), text, tone }]);
+  }, []);
+
+  const dismissToast = useCallback((id: number) => {
+    setToasts((current) => current.filter((item) => item.id !== id));
+  }, []);
 
   /** Applies an API result, surfacing its error rather than swallowing it. */
   function apply(result: ApiResult): boolean {
@@ -216,9 +250,9 @@ export default function App() {
 
     setBusy('withdraw');
     const result = await api('/api/consent', { method: 'DELETE' });
-    if (apply(result)) setFlash('Your health data has been deleted.');
+    if (apply(result)) toast('Your health data has been deleted.');
     setBusy(null);
-  }, []);
+  }, [toast]);
 
   const saveConditions = useCallback(async (keys: ConditionId[]) => {
     setBusy('conditions');
@@ -243,10 +277,10 @@ export default function App() {
         method: 'POST',
         body: JSON.stringify(input),
       });
-      if (apply(result)) setFlash('Recorded.');
+      if (apply(result)) toast('Reading added.');
       setBusy(null);
     },
-    [],
+    [toast],
   );
 
   const deleteMeasurement = useCallback(async (id: string) => {
@@ -255,9 +289,9 @@ export default function App() {
       method: 'DELETE',
       body: JSON.stringify({ id }),
     });
-    if (apply(result)) setFlash('Deleted.');
+    if (apply(result)) toast('Reading deleted.');
     setBusy(null);
-  }, []);
+  }, [toast]);
 
   const stake = useCallback(async () => {
     if (!state) return;
@@ -280,10 +314,10 @@ export default function App() {
         setPendingReason(
           typeof result.reason === 'string' ? result.reason : null,
         );
-        setFlash(
+        toast(
           result.pending
-            ? 'Payment sent. Confirming on Polygon now.'
-            : 'You are committed. Check in every day.',
+            ? 'Transfer sent. Confirming on Polygon now.'
+            : 'You are committed. Mark today done to start.',
         );
       }
     } catch (err) {
@@ -291,7 +325,7 @@ export default function App() {
     } finally {
       setBusy(null);
     }
-  }, [state]);
+  }, [state, toast]);
 
   /** Manual re-check, so a stalled confirmation is always recoverable. */
   const recheckStake = useCallback(async () => {
@@ -308,82 +342,94 @@ export default function App() {
     setBusy('checkin');
     const result = await api('/api/checkin', { method: 'POST' });
     if (apply(result)) {
-      setFlash(
+      toast(
         result.alreadyCheckedIn
           ? 'You already checked in today.'
-          : 'Checked in. Nice work.',
+          : 'Checked in.',
       );
     }
     setBusy(null);
   }, []);
 
-  // Clear the flash message after a moment so it does not linger.
-  useEffect(() => {
-    if (!flash) return;
-    const timer = setTimeout(() => setFlash(null), 4000);
-    return () => clearTimeout(timer);
-  }, [flash]);
-
   // --- render --------------------------------------------------------------
 
+  // The handshake takes up to 2.5 seconds. Say who we are for that time
+  // rather than showing a bare spinner on an empty field.
   if (phase === 'booting') {
     return (
       <main className="shell">
         <Masthead />
-        <div className="card" style={{ textAlign: 'center', padding: 40 }}>
-          <span className="spinner dark" style={{ width: 26, height: 26 }} />
-        </div>
+        <Window bar="Welcome" offset size="roomy">
+          <h1 style={{ marginBottom: 12 }}>Stay ahead of family history.</h1>
+          <p className="muted">
+            Know your family history. Build better habits. Stay ahead.
+          </p>
+          <div className="pv-center-pad">
+            <span
+              className="pv-spinner"
+              style={{ width: 26, height: 26 }}
+              role="img"
+              aria-label="Opening Preventah"
+            />
+          </div>
+        </Window>
       </main>
     );
   }
 
-  const notices = (
-    <>
-      {error ? <div className="notice error">{error}</div> : null}
-      {flash ? <div className="notice good">{flash}</div> : null}
-    </>
-  );
+  /*
+    Outside Nimiq Pay there is no wallet to connect to, so a connect button
+    would be a dead end. A visitor who reached the production URL in a normal
+    browser gets the public site instead: the same brand system, everything
+    explained, and a deeplink that opens the real thing.
+
+    This is also why the Mini App stays mounted at "/". That URL is the
+    registered Nimiq Pay deeplink target, and moving it would break every
+    existing entry point.
+  */
+  if (phase === 'site') {
+    return <SiteHome />;
+  }
 
   if (phase === 'connect') {
     return (
       <main className="shell">
         <Masthead />
-        {notices}
+        {error ? <ErrorNotice>{error}</ErrorNotice> : null}
 
-        <section className="card">
-          <h2>Your family history, turned into a daily habit</h2>
-          <p className="muted" style={{ marginTop: 10 }}>
-            Pick the conditions that run in your family. Preventah gives you a
-            small, specific plan each day: one diet change, one bit of
-            movement, one habit.
+        <Window bar="Welcome" offset size="roomy">
+          <h1 style={{ marginBottom: 12 }}>Stay ahead of family history.</h1>
+
+          <p className="muted">
+            Know your family history. Build better habits. Stay ahead.
           </p>
           <p className="muted">
-            Back it with a USDT stake. Show up, and you get it back with a
-            reward. Miss the target, and you still get your stake back in full.
+            Pick what runs in your family and Preventah gives you a small,
+            specific plan each day: one diet change, one bit of movement, one
+            habit. Back it with a USDT commitment you get back for showing up.
           </p>
 
-          {host && !host.insideNimiqPay ? (
-            <div className="notice info" style={{ marginTop: 14 }}>
-              Preventah is a Nimiq Pay Mini App. Open it inside Nimiq Pay to
-              connect your wallet and stake.
-            </div>
-          ) : null}
-
-          <button
-            type="button"
-            className="btn btn-primary"
-            style={{ marginTop: 16 }}
-            disabled={busy !== null}
+          <Button
+            variant="primary"
+            offset
+            busy={busy === 'connect'}
+            busyLabel="Check your wallet"
             onClick={connect}
+            style={{ marginTop: 20 }}
           >
-            {busy === 'connect' ? <span className="spinner" /> : null}
-            {busy === 'connect' ? 'Check your wallet' : 'Connect wallet'}
-          </button>
+            Continue with Nimiq Pay
+          </Button>
 
           <p className="faint" style={{ marginTop: 12, textAlign: 'center' }}>
-            You will be asked to sign a free message. No funds move.
+            Preventah uses your Nimiq Pay wallet. Keys stay in Nimiq Pay. You
+            will be asked to sign a free message &mdash; no funds move.
           </p>
-        </section>
+        </Window>
+
+        <p className="footer-note">
+          Preventah is a prevention-habit tool. It is not medical advice, a
+          diagnosis, or a payment-yield product.
+        </p>
       </main>
     );
   }
@@ -392,20 +438,22 @@ export default function App() {
     return (
       <main className="shell">
         <Masthead />
-        <div className="notice error">
-          Could not load your account. Please reopen the app.
-        </div>
+        <Window bar="Could not load" barTone="blush" offset>
+          <p className="muted">
+            Preventah could not load your account. Reopening the app usually
+            clears it. Your commitment and your funds are unaffected.
+          </p>
+        </Window>
       </main>
     );
   }
-
 
   const short = `${state.address.slice(0, 6)}...${state.address.slice(-4)}`;
 
   return (
     <main className="shell">
       <Masthead subtitle={short} />
-      {notices}
+      {error ? <ErrorNotice>{error}</ErrorNotice> : null}
 
       <RenderErrorBoundary>
       {!state.hasConsent ? (

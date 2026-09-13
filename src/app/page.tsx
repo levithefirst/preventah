@@ -1,4 +1,4 @@
-import App from '@/components/App';
+import App from "@/components/App";
 
 /**
  * The Mini App is a single screen driven entirely by client state, so the

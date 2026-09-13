@@ -2,13 +2,18 @@
 
 import { useState } from 'react';
 import type { StakeHistoryView } from '@/lib/state';
+import Window from './ui/Window';
+import Badge from './ui/Badge';
 
-const STATUS_LABEL: Record<StakeHistoryView['status'], { text: string; tone: string }> = {
+const STATUS_LABEL: Record<
+  StakeHistoryView['status'],
+  { text: string; tone: 'neutral' | 'ok' | 'warn' | 'bad' }
+> = {
   pending: { text: 'Confirming', tone: 'warn' },
-  active: { text: 'In progress', tone: '' },
+  active: { text: 'In progress', tone: 'neutral' },
   rejected: { text: 'Not counted', tone: 'bad' },
   settling: { text: 'Settling', tone: 'warn' },
-  completed: { text: 'Paid out', tone: 'ok' },
+  completed: { text: 'Settled', tone: 'ok' },
   payout_failed: { text: 'Needs attention', tone: 'bad' },
 };
 
@@ -33,45 +38,47 @@ function PayoutHash({ hash }: { hash: string }) {
   }
 
   return (
-    <button type="button" className="btn-linklike" onClick={copy}>
+    <button type="button" className="pv-link-btn" onClick={copy}>
       {copied ? 'Payout hash copied' : 'Copy payout hash'}
     </button>
   );
 }
 
-export default function HistoryCard({ history }: { history: StakeHistoryView[] }) {
+export default function HistoryCard({
+  history,
+}: {
+  history: StakeHistoryView[];
+}) {
   if (history.length === 0) return null;
 
   return (
-    <section className="card">
-      <div className="card-head">
-        <h2>History</h2>
-      </div>
+    <Window bar="Settled" barNote={`${history.length} commitment${history.length === 1 ? '' : 's'}`}>
+      <ul className="pv-history">
+        {history.map((row) => {
+          const status = STATUS_LABEL[row.status];
+          const paidReward =
+            row.status === 'completed' && row.rewardUsdt !== '0.00';
 
-      {history.map((row) => {
-        const status = STATUS_LABEL[row.status];
-        return (
-          <div key={row.id} className="history-row">
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontWeight: 600, fontSize: '0.92rem' }}>
-                {row.amountUsdt} USDT
-                {row.status === 'completed' && row.rewardUsdt !== '0.00' ? (
-                  <span style={{ color: 'var(--success)', fontWeight: 650 }}>
-                    {' '}
-                    + {row.rewardUsdt}
-                  </span>
-                ) : null}
+          return (
+            <li key={row.id} className="pv-history-row">
+              <div style={{ minWidth: 0 }}>
+                <div className="amount" style={{ fontSize: 17 }}>
+                  {row.amountUsdt} USDT
+                  {paidReward ? (
+                    <span className="pv-reward"> + {row.rewardUsdt}</span>
+                  ) : null}
+                </div>
+                <div className="faint">
+                  {row.checkinCount} of {row.targetDays} days &middot; started{' '}
+                  {row.startedAt.slice(0, 10)}
+                </div>
+                {row.payoutTxHash ? <PayoutHash hash={row.payoutTxHash} /> : null}
               </div>
-              <div className="faint">
-                {row.checkinCount} of {row.targetDays} days &middot; started{' '}
-                {row.startedAt.slice(0, 10)}
-              </div>
-              {row.payoutTxHash ? <PayoutHash hash={row.payoutTxHash} /> : null}
-            </div>
-            <span className={`badge ${status.tone}`}>{status.text}</span>
-          </div>
-        );
-      })}
-    </section>
+              <Badge tone={status.tone}>{status.text}</Badge>
+            </li>
+          );
+        })}
+      </ul>
+    </Window>
   );
 }

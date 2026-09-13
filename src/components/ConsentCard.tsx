@@ -1,15 +1,20 @@
 'use client';
 
 import { useState } from 'react';
+import Window from './ui/Window';
+import Button from './ui/Button';
 
 /**
  * Explicit consent gate.
  *
- * Nothing health-related is stored before this is accepted: the checklist
- * is not even rendered until consent exists, and the server refuses to
- * write a selection without a matching consent row. The button stays
- * disabled until the box is ticked, so consent is never implied by
- * simply continuing.
+ * Nothing health-related is stored before this is accepted: the catalog is
+ * not even rendered until consent exists, and the server refuses to write a
+ * selection or a measurement without a matching consent row.
+ *
+ * The bar across the top is ink, not mint. Every other surface in the
+ * product is allowed to be warm; this one is asking permission to hold
+ * someone's family health history, and it should look like it knows that.
+ * The geometry stays identical so it still belongs to the same product.
  */
 export default function ConsentCard({
   consentVersion,
@@ -23,34 +28,37 @@ export default function ConsentCard({
   const [agreed, setAgreed] = useState(false);
 
   return (
-    <section className="card">
-      <div className="card-head">
-        <h2>Before we start</h2>
-        <span className="badge">Step 1 of 2</span>
-      </div>
+    <Window bar="Before we use health information" barTone="ink" offset size="roomy">
+      <h2 style={{ marginBottom: 12 }}>
+        You decide what Preventah keeps
+      </h2>
 
       <p className="muted">
-        Preventah builds your daily plan from conditions you pick from a
-        fixed list, and can track measurements you choose to record. That is
-        health information, so we ask first.
+        Preventah builds your daily plan from conditions you pick from a fixed
+        list, and can track measurements you choose to record. That is health
+        information, so we ask first.
       </p>
 
-      <h3 style={{ marginTop: 16, marginBottom: 8 }}>What we store</h3>
-      <ul className="consent-list">
+      <h3 className="label" style={{ marginTop: 24, marginBottom: 8 }}>
+        What we store
+      </h3>
+      <ul className="pv-consent-list">
         <li>
           The conditions you tick, as short codes such as{' '}
           <code>hypertension</code>. Nothing else about them.
         </li>
         <li>
-          Any measurements you choose to record, such as weight or blood
-          pressure: a number, a unit and a date. Recording them is optional
-          and you can delete any of them at any time.
+          Any measurements you choose to record: a number, a unit and a date.
+          Recording them is optional and you can delete any of them at any
+          time.
         </li>
         <li>Your wallet address, your stake, and which days you checked in.</li>
       </ul>
 
-      <h3 style={{ marginTop: 16, marginBottom: 8 }}>What we never ask for</h3>
-      <ul className="consent-list">
+      <h3 className="label" style={{ marginTop: 24, marginBottom: 8 }}>
+        What we never ask for
+      </h3>
+      <ul className="pv-consent-list">
         <li>
           Your name, date of birth, email, or anything that identifies you
           personally.
@@ -70,8 +78,10 @@ export default function ConsentCard({
         </li>
       </ul>
 
-      <h3 style={{ marginTop: 16, marginBottom: 8 }}>Your control</h3>
-      <ul className="consent-list">
+      <h3 className="label" style={{ marginTop: 24, marginBottom: 8 }}>
+        Your control
+      </h3>
+      <ul className="pv-consent-list">
         <li>
           You can withdraw consent at any time from the bottom of the main
           screen. Your selections and measurements are deleted immediately
@@ -84,7 +94,7 @@ export default function ConsentCard({
         <li>Your data is never sold, shared, or used to train anything.</li>
       </ul>
 
-      <label className="consent-confirm">
+      <label className="pv-consent-confirm">
         <input
           type="checkbox"
           checked={agreed}
@@ -92,24 +102,27 @@ export default function ConsentCard({
         />
         <span>
           I consent to Preventah storing the conditions I select and any
-          measurements I choose to record, so it can build my daily
-          prevention plan and show me my progress.
+          measurements I choose to record, so it can build my daily prevention
+          plan and show me my progress.
         </span>
       </label>
 
-      <button
-        type="button"
-        className="btn btn-primary"
-        disabled={!agreed || busy}
+      <Button
+        variant="primary"
+        offset
+        disabled={!agreed}
+        busy={busy}
+        busyLabel="Saving"
         onClick={onAccept}
       >
-        {busy ? <span className="spinner" /> : null}
-        {busy ? 'Saving' : 'I consent, continue'}
-      </button>
+        Agree and continue
+      </Button>
 
-      <p className="faint" style={{ marginTop: 12, textAlign: 'center' }}>
+      <p className="faint" style={{ marginTop: 14, textAlign: 'center' }}>
+        Preventah does not diagnose, treat or prescribe.
+        <br />
         Consent text version {consentVersion}
       </p>
-    </section>
+    </Window>
   );
 }

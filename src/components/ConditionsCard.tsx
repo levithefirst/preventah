@@ -3,6 +3,10 @@
 import dynamic from 'next/dynamic';
 import { useState } from 'react';
 import type { ConditionId } from '@/lib/conditions';
+import Window, { WindowHead } from './ui/Window';
+import Button from './ui/Button';
+import { StaticChip } from './ui/Chip';
+import { SkeletonRows } from './ui/States';
 
 /**
  * The conditions section: a summary, and the picker behind it.
@@ -23,9 +27,9 @@ const ConditionPicker = dynamic(() => import('./ConditionPicker'), {
   // would ship the markup for 117 rows as well as the data.
   ssr: false,
   loading: () => (
-    <div className="picker-loading">
-      <span className="spinner dark" />
-      <span>Loading conditions</span>
+    <div>
+      <div className="pv-skeleton" style={{ height: 48, marginBottom: 16 }} />
+      <SkeletonRows count={4} />
     </div>
   ),
 });
@@ -48,7 +52,7 @@ export default function ConditionsCard({
 
   if (!compact || open) {
     return (
-      <section className="card">
+      <Window offset={!compact} size="roomy">
         <ConditionPicker
           initial={initial}
           busy={busy}
@@ -59,40 +63,34 @@ export default function ConditionsCard({
           }}
           onCancel={() => setOpen(false)}
         />
-      </section>
+      </Window>
     );
   }
 
   return (
-    <section className="card">
-      <div className="row-between">
-        <div>
-          <h2>Your family history</h2>
-          <span className="muted">
-            {initial.length === 0
-              ? 'Nothing selected yet'
-              : `${initial.length} condition${initial.length === 1 ? '' : 's'} tracked`}
-          </span>
-        </div>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          style={{ width: 'auto' }}
-          onClick={() => setOpen(true)}
-        >
-          Edit
-        </button>
-      </div>
+    <Window>
+      <WindowHead
+        title="Your family history"
+        aside={
+          <Button
+            variant="ghost"
+            style={{ width: 'auto', minHeight: 44, padding: '0 12px' }}
+            onClick={() => setOpen(true)}
+          >
+            Edit
+          </Button>
+        }
+      />
 
       {labels.length > 0 ? (
-        <div className="chips" style={{ marginTop: 12 }}>
+        <div className="pv-chips">
           {labels.map((label) => (
-            <span key={label} className="chip chip-static">
-              {label}
-            </span>
+            <StaticChip key={label}>{label}</StaticChip>
           ))}
         </div>
-      ) : null}
-    </section>
+      ) : (
+        <p className="faint">Nothing selected yet.</p>
+      )}
+    </Window>
   );
 }

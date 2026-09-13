@@ -11,6 +11,11 @@ import {
   type MeasurementPoint,
 } from '@/lib/measurements';
 import type { MeasurementSeries } from '@/lib/state';
+import Window from './ui/Window';
+import Button from './ui/Button';
+import Chip from './ui/Chip';
+import { Field, Input, Select } from './ui/Field';
+import { EmptyState, ErrorNotice } from './ui/States';
 
 /**
  * Progress tracking.
@@ -69,7 +74,7 @@ function Sparkline({ series, label }: { series: Series[]; label: string }) {
 
   return (
     <svg
-      className="spark"
+      className="pv-spark"
       viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
       preserveAspectRatio="none"
       role="img"
@@ -146,13 +151,13 @@ function SeriesBlock({
 
   const primary: Series = {
     values: series.points.map((p) => p.value),
-    color: 'var(--accent)',
+    color: 'var(--color-ink)',
   };
   const secondary =
     series.points[0].valueSecondary !== null
       ? {
           values: series.points.map((p) => p.valueSecondary ?? 0),
-          color: 'var(--text-faint)',
+          color: 'var(--color-muted)',
         }
       : null;
 
@@ -161,10 +166,10 @@ function SeriesBlock({
   const visible = showAll ? listed : listed.slice(0, 3);
 
   return (
-    <div className="series">
+    <div className="pv-series">
       <div className="row-between">
         <h3>{spec.label}</h3>
-        <span className="series-latest">
+        <span className="pv-series-value amount">
           {formatMeasurement(series.points[series.points.length - 1])}
         </span>
       </div>
@@ -173,17 +178,25 @@ function SeriesBlock({
         series={secondary ? [primary, secondary] : [primary]}
         label={`${spec.label} over ${series.points.length} readings`}
       />
+      {secondary ? (
+        <p className="faint pv-legend">
+          <span className="pv-swatch pv-swatch-ink" aria-hidden="true" />
+          Systolic
+          <span className="pv-swatch pv-swatch-muted" aria-hidden="true" />
+          Diastolic
+        </p>
+      ) : null}
 
       <TrendLine series={series} />
 
-      <ul className="series-list">
+      <ul className="pv-series-list">
         {visible.map((point) => (
           <li key={point.id}>
             <span className="mono">{point.measuredOn}</span>
             <span>{formatMeasurement(point)}</span>
             <button
               type="button"
-              className="btn-linklike"
+              className="pv-link-btn"
               disabled={busy}
               onClick={() => onDelete(point)}
               aria-label={`Delete ${spec.label} from ${point.measuredOn}`}
@@ -197,7 +210,7 @@ function SeriesBlock({
       {listed.length > 3 ? (
         <button
           type="button"
-          className="btn-linklike"
+          className="pv-link-btn"
           onClick={() => setShowAll((value) => !value)}
         >
           {showAll ? 'Show fewer' : `Show all ${listed.length}`}
@@ -271,120 +284,106 @@ export default function ProgressCard({
   }
 
   return (
-    <section className="card">
-      <div className="card-head">
-        <h2>Your progress</h2>
-      </div>
-
-      <p className="muted" style={{ marginBottom: 12 }}>
+    <Window bar="Progress" barNote={ordered.length > 0 ? `${ordered.length} tracked` : undefined}>
+      <p className="muted" style={{ marginBottom: 16 }}>
         Optional. Record a number whenever you like and watch it move.
         Preventah never tells you whether a reading is good or bad, and sets
         no targets. Everything here is typed by you; nothing is read from a
         device or another app.
       </p>
 
-      <div className="chips" role="group" aria-label="Measurement type">
+      <div className="pv-rail" role="group" aria-label="Measurement type">
         {MEASUREMENTS.map((m) => (
-          <button
+          <Chip
             key={m.kind}
-            type="button"
-            className={`chip${kind === m.kind ? ' chip-on' : ''}`}
+            selected={kind === m.kind}
             onClick={() => changeKind(m.kind)}
           >
             {m.label}
-          </button>
+          </Chip>
         ))}
       </div>
 
       {spec ? (
-        <div className="measure-form">
-          <label className="field-label" htmlFor="measure-value">
-            {spec.prompt}
-          </label>
+        <div className="pv-measure-form">
+          <Field label={spec.prompt} htmlFor="measure-value" hint={spec.help}>
+            <div className="pv-measure-row">
+              <Input
+                id="measure-value"
+                type="text"
+                inputMode="decimal"
+                invalid={Boolean(error)}
+                placeholder={spec.secondary ? 'Systolic' : unitSpec?.label}
+                value={value}
+                onChange={(event) => setValue(event.target.value)}
+              />
 
-          <div className="measure-row">
-            <input
-              id="measure-value"
-              className="measure-input"
-              type="text"
-              inputMode="decimal"
-              placeholder={spec.secondary ? 'Systolic' : unitSpec?.label}
-              value={value}
-              onChange={(event) => setValue(event.target.value)}
+              {spec.secondary ? (
+                <>
+                  <span className="pv-measure-sep" aria-hidden="true">
+                    /
+                  </span>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    invalid={Boolean(error)}
+                    placeholder={spec.secondary.label}
+                    aria-label={spec.secondary.label}
+                    value={valueSecondary}
+                    onChange={(event) => setValueSecondary(event.target.value)}
+                  />
+                </>
+              ) : null}
+
+              {spec.units.length > 1 ? (
+                <Select
+                  className="pv-measure-unit"
+                  value={unit}
+                  aria-label="Unit"
+                  onChange={(event) => setUnit(event.target.value)}
+                >
+                  {spec.units.map((u) => (
+                    <option key={u.unit} value={u.unit}>
+                      {u.label}
+                    </option>
+                  ))}
+                </Select>
+              ) : (
+                <span className="pv-measure-unit-static">{unitSpec?.label}</span>
+              )}
+            </div>
+          </Field>
+
+          <Field label="Date" htmlFor="measure-date">
+            <Input
+              id="measure-date"
+              type="date"
+              max={today}
+              value={measuredOn}
+              onChange={(event) => setMeasuredOn(event.target.value)}
             />
+          </Field>
 
-            {spec.secondary ? (
-              <>
-                <span className="measure-sep" aria-hidden="true">
-                  /
-                </span>
-                <input
-                  className="measure-input"
-                  type="text"
-                  inputMode="decimal"
-                  placeholder={spec.secondary.label}
-                  aria-label={spec.secondary.label}
-                  value={valueSecondary}
-                  onChange={(event) => setValueSecondary(event.target.value)}
-                />
-              </>
-            ) : null}
+          {error ? <ErrorNotice>{error}</ErrorNotice> : null}
 
-            {spec.units.length > 1 ? (
-              <select
-                className="measure-unit"
-                value={unit}
-                aria-label="Unit"
-                onChange={(event) => setUnit(event.target.value)}
-              >
-                {spec.units.map((u) => (
-                  <option key={u.unit} value={u.unit}>
-                    {u.label}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <span className="measure-unit-static">{unitSpec?.label}</span>
-            )}
-          </div>
-
-          <label className="field-label" htmlFor="measure-date">
-            Date
-          </label>
-          <input
-            id="measure-date"
-            className="measure-input"
-            type="date"
-            max={today}
-            value={measuredOn}
-            onChange={(event) => setMeasuredOn(event.target.value)}
-          />
-
-          <p className="faint" style={{ marginTop: 8 }}>
-            {spec.help}
-          </p>
-
-          {error ? <div className="notice error">{error}</div> : null}
-
-          <button
-            type="button"
-            className="btn btn-secondary"
-            disabled={busy || value.trim().length === 0}
+          <Button
+            variant="secondary"
+            disabled={value.trim().length === 0}
+            busy={busy}
+            busyLabel="Saving"
             onClick={submit}
           >
-            {busy ? <span className="spinner dark" /> : null}
-            {busy ? 'Saving' : 'Record'}
-          </button>
+            Add reading
+          </Button>
         </div>
       ) : null}
 
       {ordered.length === 0 ? (
-        <p className="faint" style={{ marginTop: 16 }}>
-          Nothing recorded yet. One number today gives you something to
-          compare against next week.
-        </p>
+        <EmptyState title="No measurements logged">
+          One number today gives you something to compare against next week.
+        </EmptyState>
       ) : (
-        <div className="series-stack">
+        <div className="pv-series-stack">
           {ordered.map((series) => (
             <SeriesBlock
               key={series.kind}
@@ -395,6 +394,6 @@ export default function ProgressCard({
           ))}
         </div>
       )}
-    </section>
+    </Window>
   );
 }

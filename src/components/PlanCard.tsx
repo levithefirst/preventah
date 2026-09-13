@@ -2,67 +2,73 @@
 
 import { useEffect, useState } from 'react';
 import type { DailyPlan, PlanItem } from '@/lib/plans';
+import Window from './ui/Window';
+import { Notice } from './ui/States';
+import PlanGlyph from './ui/PlanGlyph';
 
 const SLOTS: {
   key: keyof Pick<DailyPlan, 'diet' | 'exercise' | 'habit'>;
   label: string;
-  icon: string;
 }[] = [
-  { key: 'diet', label: 'Diet', icon: '\u{1F957}' },
-  { key: 'exercise', label: 'Exercise', icon: '\u{1F45F}' },
-  { key: 'habit', label: 'Habit', icon: '\u{1F9E9}' },
+  { key: 'diet', label: 'Diet' },
+  { key: 'exercise', label: 'Exercise' },
+  { key: 'habit', label: 'Habit' },
 ];
 
 /**
  * The expanded view of one plan item.
  *
- * Rendered inline underneath the row rather than in a modal: a modal inside
- * the Nimiq Pay WebView competes with the host's own sheets and its own
- * back gesture, and there is nothing here that needs to trap focus.
+ * Rendered inline underneath the row rather than in a modal. A bottom sheet
+ * inside the Nimiq Pay WebView competes with the host's own sheets and its
+ * own back gesture, and there is nothing here that needs to trap focus.
+ *
+ * Every field is read from stored content. Nothing on this screen is
+ * generated at request time.
  */
 function PlanDetail({ item }: { item: PlanItem }) {
   return (
-    <div className="plan-detail">
-      <p className="plan-detail-lead">{item.description}</p>
+    <div className="pv-plan-detail">
+      <p style={{ fontWeight: 600 }}>{item.description}</p>
 
-      <h3>Why this matters</h3>
+      <h4>Why this matters</h4>
       <p>{item.why}</p>
 
-      <h3>What to do</h3>
-      <ul className="plan-steps">
+      <h4>What to do</h4>
+      <ul className="pv-steps">
         {item.howTo.map((step) => (
           <li key={step}>{step}</li>
         ))}
       </ul>
 
-      <h3>What it may support</h3>
+      <h4>What it may support</h4>
       <p>{item.benefit}</p>
       {item.relatedConditions.length > 0 ? (
         <p className="faint">
-          Shown to you because you selected{' '}
-          {item.relatedConditions.join(', ')}.
+          On your plan because you selected {item.relatedConditions.join(', ')}.
         </p>
       ) : (
-        <p className="faint">
-          General prevention guidance, shown to everyone.
-        </p>
+        <p className="faint">General prevention guidance, shown to everyone.</p>
       )}
 
-      <h3>Today&rsquo;s target</h3>
+      <h4>Today&rsquo;s target</h4>
       <p>{item.target}</p>
 
       {item.safetyNote ? (
-        <div className="notice warn-soft">
+        <div className="pv-notice pv-notice-warn" style={{ marginTop: 14 }}>
           <strong>Worth knowing. </strong>
           {item.safetyNote}
         </div>
       ) : null}
 
+      <p className="faint" style={{ marginTop: 14 }}>
+        This is not a diagnosis or a prescription.
+      </p>
+
       <a
         href={item.sourceUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="plan-source-link"
+        className="pv-source"
       >
         Source: {item.sourceName}
       </a>
@@ -73,45 +79,48 @@ function PlanDetail({ item }: { item: PlanItem }) {
 function Row({
   item,
   label,
-  icon,
   expanded,
   onToggle,
 }: {
   item: PlanItem;
   label: string;
-  icon: string;
   expanded: boolean;
   onToggle: () => void;
 }) {
   return (
-    <div className={`plan-item${expanded ? ' expanded' : ''}`}>
+    <li className={`pv-plan-item${expanded ? ' is-open' : ''}`}>
       <button
         type="button"
-        className="plan-trigger"
+        className="pv-plan-trigger"
         aria-expanded={expanded}
         onClick={onToggle}
       >
-        <span className="plan-icon" aria-hidden="true">
-          {icon}
+        <PlanGlyph type={item.type} />
+
+        <span className="pv-plan-body">
+          <span className="pv-plan-kind">{label}</span>
+          <span className="pv-plan-title">{item.title}</span>
+          <span className="pv-plan-why">
+            {item.relatedConditions.length > 0
+              ? `From family history: ${item.relatedConditions.join(', ')}`
+              : 'General prevention'}
+          </span>
         </span>
-        <span className="plan-body">
-          <span className="plan-kind">{label}</span>
-          <span className="plan-text">{item.title}</span>
-          {item.relatedConditions.length > 0 ? (
-            <span className="plan-source">
-              For: {item.relatedConditions.join(', ')}
-            </span>
-          ) : (
-            <span className="plan-source">General prevention</span>
-          )}
-        </span>
-        <span className="plan-chevron" aria-hidden="true">
-          {expanded ? '−' : '+'}
-        </span>
+
+        <svg
+          className="pv-chevron"
+          viewBox="0 0 20 20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden="true"
+        >
+          <path d="m5 8 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
       </button>
 
       {expanded ? <PlanDetail item={item} /> : null}
-    </div>
+    </li>
   );
 }
 
@@ -129,34 +138,37 @@ export default function PlanCard({ plan }: { plan: DailyPlan }) {
   }, [plan.dayIndex, plan.diet.id, plan.exercise.id, plan.habit.id]);
 
   return (
-    <section className="card">
-      <div className="card-head">
-        <h2>Today&rsquo;s plan</h2>
-        <span className="badge">Day {plan.dayIndex + 1}</span>
-      </div>
+    <Window bar="Your prevention plan" barNote={`Day ${plan.dayIndex + 1}`} offset>
+      <p className="muted" style={{ marginBottom: 16 }}>
+        {plan.isBaseline
+          ? 'General prevention guidance. Pick what runs in your family to tailor this.'
+          : 'Built from the family history you entered. Not a diagnosis.'}
+      </p>
 
       {plan.isBaseline ? (
-        <div className="notice info">
-          Showing general prevention guidance. Pick what runs in your family to
-          tailor this.
-        </div>
+        <Notice tone="info">
+          Showing the general plan until you select your family history.
+        </Notice>
       ) : null}
 
-      {SLOTS.map(({ key, label, icon }) => (
-        <Row
-          key={key}
-          item={plan[key]}
-          label={label}
-          icon={icon}
-          expanded={openKey === key}
-          onToggle={() => setOpenKey((current) => (current === key ? null : key))}
-        />
-      ))}
+      <ul className="pv-plan-list">
+        {SLOTS.map(({ key, label }) => (
+          <Row
+            key={key}
+            item={plan[key]}
+            label={label}
+            expanded={openKey === key}
+            onToggle={() =>
+              setOpenKey((current) => (current === key ? null : key))
+            }
+          />
+        ))}
+      </ul>
 
-      <p className="footer-note">
-        Tap any item for why it matters and what to do. This is general
-        lifestyle guidance, not medical advice.
+      <p className="faint" style={{ marginTop: 14 }}>
+        Tap any item for why it is here and what to do. General lifestyle
+        guidance, not medical advice.
       </p>
-    </section>
+    </Window>
   );
 }

@@ -282,20 +282,22 @@ a {
   padding: var(--space-4);
 }
 
-.pv-window.has-offset::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  transform: translate(var(--offset), var(--offset));
-  background: var(--color-blush);
-  border-radius: inherit;
-  z-index: -1;
-}
+/*
+  The blush plate.
 
-/* The offset plate lives behind its own window, not behind the page. */
+  Drawn as a hard-edged box-shadow rather than a pseudo-element. A pseudo-
+  element at z-index:-1 paints above its own parent's background, so the
+  plate covered the cream sheet instead of sitting behind it; escaping that
+  needs a negative z-index that leaks into whatever stacking context the
+  card happens to land in, which is fragile in a way a card primitive
+  cannot afford.
+
+  A zero-blur shadow is painted outside the border by definition, follows
+  border-radius for free, and cannot be reordered by an ancestor. It is the
+  offset plate the design asks for, not the soft SaaS shadow it forbids.
+*/
 .pv-window.has-offset {
-  isolation: isolate;
-  z-index: 0;
+  box-shadow: var(--offset) var(--offset) 0 0 var(--color-blush);
 }
 
 .pv-window-compact {
@@ -405,19 +407,8 @@ a {
   background: var(--color-mint);
 }
 
-.pv-btn-primary.has-offset::before {
-  content: '';
-  position: absolute;
-  inset: -2px;
-  transform: translate(3px, 3px);
-  background: var(--color-blush);
-  border-radius: inherit;
-  z-index: -1;
-}
-
-.pv-btn-primary.has-offset {
-  isolation: isolate;
-  z-index: 0;
+.pv-btn.has-offset {
+  box-shadow: 3px 3px 0 0 var(--color-blush);
 }
 
 .pv-btn-secondary {
@@ -441,6 +432,11 @@ a {
   transform: translate(2px, 2px);
 }
 
+/* Sliding onto the plate without shrinking it would make the button grow. */
+.pv-btn.has-offset:active:not(:disabled) {
+  box-shadow: 1px 1px 0 0 var(--color-blush);
+}
+
 .pv-btn-primary:active:not(:disabled) {
   background: var(--color-mint-deep);
 }
@@ -450,8 +446,8 @@ a {
   cursor: not-allowed;
 }
 
-.pv-btn:disabled::before {
-  display: none;
+.pv-btn:disabled {
+  box-shadow: none;
 }
 
 /* A text-weight action that is still a real button. */
@@ -681,19 +677,25 @@ a {
   cursor: pointer;
 }
 
-.pv-tick {
+/*
+  A category glyph, not a tick box. See PlanCard for why this is not a
+  checkbox: there is no per-item completion to store, and a control that
+  looks tappable and does nothing is worse than no control.
+*/
+.pv-glyph {
   display: grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
-  margin-top: 2px;
-  border: var(--stroke) solid var(--color-border);
-  border-radius: 7px;
-  background: var(--color-cream);
+  margin-top: 1px;
+  border: var(--stroke-thin) solid var(--color-border);
+  border-radius: 9px;
+  background: var(--color-cream-2);
+  color: var(--color-ink);
 }
 
-.pv-plan-item.is-open .pv-tick {
+.pv-plan-item.is-open .pv-glyph {
   background: var(--color-mint);
 }
 
@@ -1163,18 +1165,6 @@ a {
   text-decoration: underline;
 }
 
-.pv-site-header .pv-btn {
-  width: auto;
-  min-height: 44px;
-  margin-left: auto;
-  padding: 0 var(--space-4);
-  font-size: var(--text-caption);
-}
-
-.pv-site-nav ~ .pv-btn {
-  margin-left: 0;
-}
-
 .pv-section {
   max-width: var(--site-max);
   margin: 0 auto;
@@ -1199,10 +1189,12 @@ a {
   text-transform: uppercase;
 }
 
+.pv-section > h1,
 .pv-section > h2 {
   max-width: 20ch;
   margin-bottom: var(--space-3);
   font-size: clamp(26px, 6vw, 40px);
+  line-height: 1.15;
   letter-spacing: -0.03em;
 }
 
@@ -1437,5 +1429,487 @@ a {
   .pv-lift:hover,
   .pv-btn:hover:not(:disabled) {
     transform: none;
+  }
+}
+
+/* === 18. Consent ========================================================= */
+
+.pv-consent-list {
+  margin: 0;
+  padding-left: var(--space-5);
+  color: var(--color-ink-soft);
+  font-size: var(--text-ui);
+  line-height: 1.5;
+}
+
+.pv-consent-list li {
+  margin-bottom: var(--space-2);
+}
+
+.pv-consent-list code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--color-cream-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+/*
+  The consent tick is a real checkbox in a real label, so the whole block is
+  the target and assistive tech reads the sentence as the control's name.
+*/
+.pv-consent-confirm {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  margin: var(--space-6) 0 var(--space-4);
+  padding: var(--space-4);
+  border: var(--stroke) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-cream-2);
+  font-size: var(--text-ui);
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.pv-consent-confirm input {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  margin: 0;
+  accent-color: var(--color-ink);
+}
+
+/* === 19. Condition picker ================================================ */
+
+/*
+  Visible only to assistive technology. Used for the live result count, which
+  a sighted user reads off the list itself.
+*/
+.pv-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.pv-tray {
+  margin: var(--space-4) 0;
+  padding: var(--space-3);
+  border: var(--stroke-thin) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-cream-2);
+}
+
+.pv-cond-list {
+  list-style: none;
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  /* Cap the list rather than the page: 117 rows is a very long scroll, and a
+     contained one keeps the sticky footer honest. */
+  max-height: 54vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.pv-cond {
+  border: var(--stroke-thin) solid var(--color-border-soft);
+  border-radius: var(--radius-md);
+  background: var(--color-cream);
+  margin-bottom: var(--space-2);
+  overflow: hidden;
+}
+
+.pv-cond.is-on {
+  border-color: var(--color-border);
+  border-width: var(--stroke);
+  background: var(--color-mint);
+}
+
+.pv-cond-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-height: 56px;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+}
+
+.pv-cond-main {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 0;
+  /* The label is the touch target, so it needs the full row height. */
+  min-height: 44px;
+  padding: var(--space-2) 0;
+  cursor: pointer;
+}
+
+.pv-cond-main input {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  margin: 1px 0 0;
+  accent-color: var(--color-ink);
+}
+
+.pv-cond-text {
+  min-width: 0;
+}
+
+.pv-cond-name {
+  display: block;
+  font-size: var(--text-body);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.pv-cond-desc {
+  display: block;
+  margin-top: 2px;
+  color: var(--color-ink-soft);
+  font-size: var(--text-caption);
+  line-height: 1.4;
+}
+
+.pv-cond.is-on .pv-cond-desc {
+  color: var(--color-ink-soft);
+}
+
+.pv-cond-detail {
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  border-top: var(--stroke-thin) solid var(--color-border-soft);
+  background: var(--color-cream);
+  color: var(--color-ink-soft);
+  font-size: var(--text-caption);
+  line-height: 1.55;
+}
+
+.pv-cond-relevance {
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.pv-picker-footer {
+  position: sticky;
+  bottom: 0;
+  margin: var(--space-4) calc(var(--space-5) * -1) calc(var(--space-5) * -1);
+  padding: var(--space-4) var(--space-5)
+    calc(var(--space-5) + env(safe-area-inset-bottom));
+  border-top: var(--stroke-thin) solid var(--color-border-soft);
+  background: var(--color-cream);
+  border-radius: 0 0 calc(var(--radius-lg) - var(--stroke))
+    calc(var(--radius-lg) - var(--stroke));
+}
+
+.pv-picker-footer .pv-btn + .pv-btn {
+  margin-top: var(--space-2);
+}
+
+/* === 20. Measurements ==================================================== */
+
+.pv-measure-form {
+  margin-top: var(--space-4);
+}
+
+.pv-series-stack {
+  margin-top: var(--space-5);
+}
+
+/*
+  Blood pressure draws two lines. They are told apart by a labelled swatch
+  rather than by colour alone, and neither colour means anything about the
+  reading: this app does not grade a blood pressure.
+*/
+.pv-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0 0 var(--space-2);
+}
+
+.pv-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  margin-right: 2px;
+}
+
+.pv-swatch + .pv-swatch,
+.pv-legend .pv-swatch:not(:first-child) {
+  margin-left: var(--space-3);
+}
+
+.pv-swatch-ink {
+  background: var(--color-ink);
+}
+
+.pv-swatch-muted {
+  background: var(--color-muted);
+}
+
+.pv-center-pad {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-5) 0;
+}
+
+.pv-money-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.amount {
+  font-family: var(--font-display);
+  font-size: var(--text-h2);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* === 21. History ========================================================= */
+
+.pv-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pv-history-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: var(--stroke-thin) solid var(--color-border-soft);
+}
+
+.pv-history-row:first-child {
+  padding-top: 0;
+}
+
+.pv-history-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+/* Money returned. The one place mint means "confirmed". */
+.pv-reward {
+  color: var(--color-money-confirmed);
+}
+
+.pv-btn-inline {
+  width: auto;
+  flex-shrink: 0;
+  min-height: 48px;
+  padding: 0 var(--space-4);
+  font-size: var(--text-caption);
+  text-decoration: none;
+}
+
+/* === 22. Transaction reference =========================================== */
+
+.pv-tx {
+  margin-top: var(--space-4);
+  padding: var(--space-3);
+  border: var(--stroke-thin) solid var(--color-border-soft);
+  border-radius: var(--radius-md);
+  background: var(--color-cream-2);
+}
+
+.pv-tx-label {
+  display: block;
+  font-size: var(--text-label);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  margin-bottom: var(--space-1);
+}
+
+.pv-tx-hash {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  word-break: break-all;
+  user-select: all;
+  color: var(--color-ink-soft);
+}
+
+.pv-tx-actions {
+  display: flex;
+  gap: var(--space-4);
+  margin-top: var(--space-2);
+}
+
+/* === 23. Public site extras ============================================== */
+
+/* Keyboard users get to the content without tabbing the whole nav. */
+.pv-skip {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 60;
+  padding: var(--space-3) var(--space-4);
+  border: var(--stroke) solid var(--color-border);
+  border-radius: 0 0 var(--radius-md) 0;
+  background: var(--color-cream);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.pv-skip:focus {
+  left: 0;
+}
+
+.pv-footer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: var(--text-ui);
+  line-height: 1.7;
+  opacity: 0.85;
+}
+
+.pv-plain-list {
+  margin: 0;
+  padding-left: var(--space-5);
+  color: var(--color-ink-soft);
+  font-size: var(--text-ui);
+  line-height: 1.55;
+}
+
+.pv-plain-list li {
+  margin-bottom: var(--space-2);
+}
+
+.pv-plain-list li:last-child {
+  margin-bottom: 0;
+}
+
+.pv-plain-list strong {
+  color: var(--color-ink);
+}
+
+.pv-hero-window {
+  max-width: 420px;
+}
+
+.pv-hero-mark {
+  display: flex;
+}
+
+/* The example plan is inert: no hover, no press, no pointer. */
+.pv-preview .pv-plan-trigger {
+  cursor: default;
+}
+
+.pv-cta-window {
+  max-width: 560px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.pv-cta-window .pv-hero-actions {
+  justify-content: center;
+}
+
+.pv-site-footer .label {
+  color: var(--color-cream);
+  opacity: 0.7;
+}
+
+/* --- site header: menu and CTA --- */
+
+.pv-header-cta {
+  width: auto;
+  min-height: 44px;
+  margin-left: auto;
+  padding: 0 var(--space-4);
+  font-size: var(--text-caption);
+  text-decoration: none;
+}
+
+.pv-site-nav ~ .pv-header-cta {
+  margin-left: 0;
+}
+
+/* The disclosure menu only exists below the desktop nav breakpoint. */
+.pv-site-menu {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.pv-site-menu > summary {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: var(--stroke) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-cream);
+  cursor: pointer;
+  list-style: none;
+}
+
+.pv-site-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.pv-site-menu[open] > summary {
+  background: var(--color-mint);
+}
+
+.pv-site-menu-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + var(--space-2));
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  padding: var(--space-2);
+  border: var(--stroke) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-cream);
+  box-shadow: var(--offset) var(--offset) 0 0 var(--color-blush);
+}
+
+.pv-site-menu-panel a {
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-ui);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.pv-site-menu-panel a:hover {
+  background: var(--color-cream-2);
+}
+
+@media (min-width: 1024px) {
+  .pv-site-menu {
+    display: none;
+  }
+}
+
+@media (max-width: 400px) {
+  /* The lockup gives up its word before the CTA gives up its label. */
+  .pv-site-header .pv-masthead-word {
+    display: none;
+  }
+  .pv-hero {
+    padding-top: var(--space-8);
   }
 }

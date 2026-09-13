@@ -3,20 +3,26 @@
 import type { ActiveStakeView, AppState } from '@/lib/state';
 import { addUtcDays, todayIso, utcDayOfWeek } from '@/lib/dates';
 import TxReference from './TxReference';
+import Window, { WindowHead } from './ui/Window';
+import Button from './ui/Button';
+import Badge from './ui/Badge';
+import { ErrorNotice, Notice } from './ui/States';
 
-const WEEKDAY = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+const WEEKDAY = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
 /**
- * One tile per day of the commitment window.
+ * One square per day of the commitment window.
  *
- * Every date operation here goes through the total helpers in lib/dates:
- * an unreadable end date yields null and this renders a short fallback,
- * rather than throwing RangeError out of render and taking the whole
- * authenticated screen down with it.
+ * A missed day is cream with a soft border, never a red cross. Missing a day
+ * costs nothing here: the stake comes back either way, and marking it in
+ * alarm colours would be a lie about the stakes as well as unkind.
+ *
+ * Every date operation goes through the total helpers in lib/dates. An
+ * unreadable end date yields null and this renders a short fallback rather
+ * than throwing RangeError out of render and taking the authenticated screen
+ * down with it.
  */
-function StreakDots({ stake }: { stake: ActiveStakeView }) {
-  // The window runs backwards from its end date, so the first tile is the
-  // day the stake was confirmed.
+function WeekSquares({ stake }: { stake: ActiveStakeView }) {
   const start = addUtcDays(stake.endsOn, -(stake.windowDays - 1));
 
   if (start === null) {
@@ -31,7 +37,7 @@ function StreakDots({ stake }: { stake: ActiveStakeView }) {
   const done = new Set(stake.checkinDates);
 
   return (
-    <div className="dots">
+    <div className="pv-week">
       {Array.from({ length: stake.windowDays }, (_, i) => {
         const date = addUtcDays(start, i);
         if (date === null) return null;
@@ -39,15 +45,33 @@ function StreakDots({ stake }: { stake: ActiveStakeView }) {
         const isDone = done.has(date);
         const isToday = date === today;
         const weekday = utcDayOfWeek(date);
-        const label = weekday === null ? '\u2022' : WEEKDAY[weekday];
+        const label = weekday === null ? '•' : WEEKDAY[weekday];
 
         return (
           <div
             key={date}
-            className={`dot${isDone ? ' done' : ''}${isToday ? ' today' : ''}`}
-            title={date}
+            className={`pv-day${isDone ? ' pv-day-done' : ''}${
+              isToday ? ' pv-day-today' : ''
+            }`}
+            title={`${date}${isDone ? ' — checked in' : ''}`}
           >
-            {isDone ? '\u2713' : label}
+            {isDone ? (
+              <svg
+                viewBox="0 0 20 20"
+                width="13"
+                height="13"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m4 10 4 4 8-8" />
+              </svg>
+            ) : (
+              label
+            )}
           </div>
         );
       })}
@@ -56,8 +80,13 @@ function StreakDots({ stake }: { stake: ActiveStakeView }) {
 }
 
 /**
- * The commitment surface. Covers all four states a user can be in:
- * no stake, stake confirming on-chain, streak running, and target reached.
+ * The commitment surface. Four states: no stake, stake confirming on-chain,
+ * streak running, and target reached.
+ *
+ * Money screens drop the playfulness and keep the geometry. The bar is ink
+ * rather than mint everywhere real USDT is being discussed, so the moment
+ * the app asks for a transfer looks different from the moment it asks about
+ * a walk.
  */
 export default function CommitmentCard({
   state,
@@ -82,87 +111,94 @@ export default function CommitmentCard({
   if (!stake) {
     const ready = state.selections.length > 0;
     return (
-      <section className="card">
-        <div className="card-head">
-          <h2>Commit</h2>
-          <span className="badge">
+      <Window bar="Commitment" barTone="ink" offset size="roomy">
+        <div className="pv-money-row">
+          <div>
+            <span className="label">Your commitment</span>
+            <div className="pv-stat" style={{ marginTop: 4 }}>
+              {state.config.stakeAmountUsdt} USDT
+            </div>
+          </div>
+          <Badge>
             {state.config.targetDays} of {state.config.windowDays} days
-          </span>
+          </Badge>
         </div>
 
-        <p className="muted">
-          Stake {state.config.stakeAmountUsdt} USDT and check in on{' '}
-          {state.config.targetDays} days out of {state.config.windowDays}. Hit
-          the target and your stake comes back with a reward on top.
+        <p className="muted" style={{ marginTop: 16 }}>
+          Check in on {state.config.targetDays} days out of{' '}
+          {state.config.windowDays}. Hit the target and your commitment comes
+          back with a reward on top.
         </p>
 
-        <div className="notice info" style={{ marginTop: 14 }}>
-          Miss the target and your stake is still returned in full. Preventah
-          never keeps your deposit.
-        </div>
+        <Notice tone="good">
+          Miss the target and your commitment is still returned in full.
+          Preventah never keeps a deposit.
+        </Notice>
 
-        <div className="row-between" style={{ margin: '16px 0 14px' }}>
-          <span className="muted">Your stake</span>
-          <span className="amount">{state.config.stakeAmountUsdt} USDT</span>
-        </div>
-
-        <button
-          type="button"
-          className="btn btn-primary"
-          disabled={!ready || busy !== null}
+        <Button
+          variant="primary"
+          offset
+          disabled={!ready}
+          busy={busy === 'stake'}
+          busyLabel="Approve in Nimiq Pay"
           onClick={onStake}
         >
-          {busy === 'stake' ? <span className="spinner" /> : null}
-          {busy === 'stake'
-            ? 'Confirm in Nimiq Pay'
-            : `Stake ${state.config.stakeAmountUsdt} USDT to commit`}
-        </button>
+          Commit {state.config.stakeAmountUsdt} USDT
+        </Button>
 
-        <p className="faint" style={{ marginTop: 10, textAlign: 'center' }}>
-          Paid in USDT on Polygon. Nimiq Pay will ask you to confirm.
-        </p>
-      </section>
+        {!ready ? (
+          <p className="faint" style={{ marginTop: 10, textAlign: 'center' }}>
+            Pick your family history first.
+          </p>
+        ) : (
+          <p className="faint" style={{ marginTop: 10, textAlign: 'center' }}>
+            This is a real USDT transfer on Polygon. Nimiq Pay will ask you to
+            approve it. Preventah does not hold your keys.
+          </p>
+        )}
+      </Window>
     );
   }
 
   // --- Stake broadcast, waiting on confirmations ---------------------------
   if (stake.status === 'pending') {
     return (
-      <section className="card">
-        <div className="card-head">
-          <h2>Confirming your stake</h2>
-          <span className={`badge ${verifyStalled ? 'bad' : 'warn'}`}>
-            {verifyStalled ? 'Not confirmed yet' : 'On-chain'}
-          </span>
-        </div>
+      <Window bar="Commitment" barTone="ink" offset size="roomy">
+        <WindowHead
+          title="Confirming your transfer"
+          aside={
+            <Badge tone={verifyStalled ? 'bad' : 'warn'}>
+              {verifyStalled ? 'Not confirmed' : 'On-chain'}
+            </Badge>
+          }
+        />
 
         {verifyStalled ? (
           <>
-            <div className="notice error">
+            <ErrorNotice>
               {pendingReason ?? 'We could not confirm your payment yet.'}
-            </div>
+            </ErrorNotice>
             <p className="muted">
-              Your {stake.amountUsdt} USDT payment was sent and your funds are
+              Your {stake.amountUsdt} USDT transfer was sent and your funds are
               not lost. Confirmation just has not completed yet. Check again
               now, or reopen Preventah later &mdash; the daily settlement job
-              also retries pending stakes on its own.
+              also retries pending commitments on its own.
             </p>
           </>
         ) : (
           <>
             <p className="muted">
-              Your {stake.amountUsdt} USDT payment is waiting for confirmations
-              on Polygon. This usually takes under a minute, and it keeps
-              running if you close the app.
+              Your {stake.amountUsdt} USDT transfer is waiting for
+              confirmations on Polygon. This usually takes under a minute, and
+              it keeps running if you close the app.
             </p>
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'center',
-                padding: '18px 0',
-              }}
-            >
-              <span className="spinner dark" style={{ width: 26, height: 26 }} />
+            <div className="pv-center-pad">
+              <span
+                className="pv-spinner"
+                style={{ width: 26, height: 26 }}
+                aria-label="Waiting for confirmations"
+                role="img"
+              />
             </div>
             {pendingReason ? (
               <p className="faint" style={{ textAlign: 'center' }}>
@@ -172,85 +208,82 @@ export default function CommitmentCard({
           </>
         )}
 
-        <button
-          type="button"
-          className={`btn ${verifyStalled ? 'btn-primary' : 'btn-secondary'}`}
-          disabled={busy !== null}
+        <Button
+          variant={verifyStalled ? 'primary' : 'secondary'}
+          offset={verifyStalled}
+          busy={busy === 'recheck'}
+          busyLabel="Checking"
           onClick={onRecheck}
         >
-          {busy === 'recheck' ? <span className="spinner" /> : null}
-          {busy === 'recheck' ? 'Checking' : 'Check again'}
-        </button>
+          Check again
+        </Button>
 
-        <TxReference hash={stake.txHash} label="Your payment" />
-      </section>
+        <TxReference hash={stake.txHash} label="Your transfer" />
+      </Window>
     );
   }
 
   // --- Streak running or target reached ------------------------------------
-  const pct = Math.min(100, (stake.checkinCount / stake.targetDays) * 100);
+  const remaining = Math.max(0, stake.targetDays - stake.checkinCount);
 
   return (
-    <section className="card">
-      <div className="card-head">
-        <h2>Your streak</h2>
-        {stake.targetMet ? (
-          <span className="badge ok">Target reached</span>
-        ) : stake.daysRemaining !== null ? (
-          <span className="badge">
-            {stake.daysRemaining} day{stake.daysRemaining === 1 ? '' : 's'} left
+    <Window
+      bar={stake.checkedInToday ? 'Checked in' : 'Today'}
+      barTone={stake.checkedInToday ? 'done' : 'mint'}
+      barNote={
+        stake.targetMet
+          ? 'Target reached'
+          : stake.daysRemaining !== null
+            ? `${stake.daysRemaining} day${stake.daysRemaining === 1 ? '' : 's'} left`
+            : undefined
+      }
+      offset
+      size="roomy"
+    >
+      <div className="pv-streak-head">
+        <span className="pv-stat">{stake.checkinCount}</span>
+        <div>
+          <span className="label">
+            of {stake.targetDays} days
           </span>
-        ) : (
-          <span className="badge">In progress</span>
-        )}
+          <p className="faint" style={{ margin: 0 }}>
+            Days you checked in.
+          </p>
+        </div>
       </div>
 
-      <div className="streak-row">
-        <div
-          className="ring"
-          style={{ ['--pct' as string]: String(pct) }}
-          role="img"
-          aria-label={`${stake.checkinCount} of ${stake.targetDays} days checked in`}
-        >
-          <div className="ring-inner">
-            <div>
-              <div className="ring-count">{stake.checkinCount}</div>
-              <div className="ring-of">of {stake.targetDays}</div>
-            </div>
-          </div>
-        </div>
-        <div style={{ minWidth: 0 }}>
-          <div className="muted" style={{ marginBottom: 2 }}>
-            {stake.amountUsdt} USDT staked
-          </div>
-          <StreakDots stake={stake} />
-        </div>
+      <WeekSquares stake={stake} />
+
+      <div className="pv-money-row" style={{ marginTop: 20 }}>
+        <span className="label">Committed</span>
+        <span className="amount">{stake.amountUsdt} USDT</span>
       </div>
 
       {stake.targetMet ? (
-        <div className="notice good">
-          You hit your target. Your stake and reward are sent back
+        <Notice tone="good">
+          You hit your target. Your commitment and reward are sent back
           automatically at the next daily settlement.
-        </div>
+        </Notice>
       ) : null}
 
-      <button
-        type="button"
-        className={`btn ${stake.checkedInToday ? 'btn-secondary' : 'btn-success'}`}
-        disabled={stake.checkedInToday || busy !== null}
+      <Button
+        variant={stake.checkedInToday ? 'secondary' : 'primary'}
+        offset={!stake.checkedInToday}
+        disabled={stake.checkedInToday}
+        busy={busy === 'checkin'}
+        busyLabel="Marking"
         onClick={onCheckIn}
       >
-        {busy === 'checkin' ? <span className="spinner" /> : null}
-        {stake.checkedInToday
-          ? "✓ Checked in today"
-          : "I followed today's plan"}
-      </button>
+        {stake.checkedInToday ? 'Done for today' : 'Mark today done'}
+      </Button>
 
       {stake.checkedInToday && !stake.targetMet ? (
         <p className="faint" style={{ marginTop: 10, textAlign: 'center' }}>
-          Come back tomorrow to keep the streak going.
+          {remaining === 0
+            ? 'Come back tomorrow to keep it going.'
+            : `Come back tomorrow. ${remaining} more to hit your target.`}
         </p>
       ) : null}
-    </section>
+    </Window>
   );
 }

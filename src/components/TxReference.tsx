@@ -35,21 +35,21 @@ export default function TxReference({
   }
 
   return (
-    <div className="tx-ref">
-      <div className="tx-ref-label">{label}</div>
-      <code className="tx-ref-hash">{hash}</code>
+    <div className="pv-tx">
+      <span className="pv-tx-label">{label}</span>
+      <code className="pv-tx-hash">{hash}</code>
 
-      <div className="tx-ref-actions">
+      <div className="pv-tx-actions">
         <button
           type="button"
-          className="btn btn-ghost"
+          className="pv-link-btn"
           onClick={() => copy(hash, 'hash')}
         >
           Copy hash
         </button>
         <button
           type="button"
-          className="btn btn-ghost"
+          className="pv-link-btn"
           onClick={() => copy(explorerUrl, 'link')}
         >
           Copy explorer link

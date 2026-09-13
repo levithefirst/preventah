@@ -1,6 +1,6 @@
 'use client';
 
-import { useDeferredValue, useMemo, useRef, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import {
   CATEGORY_SUMMARIES,
   CONDITION_COUNT,
@@ -9,6 +9,10 @@ import {
 } from '@/lib/condition-index';
 import type { ConditionCategory, ConditionEntry } from '@/lib/condition-types';
 import { MAX_SELECTIONS, type ConditionId } from '@/lib/conditions';
+import { SearchInput } from './ui/Field';
+import Chip from './ui/Chip';
+import Button from './ui/Button';
+import { EmptyState, Notice } from './ui/States';
 
 /**
  * The condition picker.
@@ -44,45 +48,68 @@ function ConditionRow({
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className={`choice${checked ? ' selected' : ''}`}>
-      <input
-        type="checkbox"
-        checked={checked}
-        disabled={disabled}
-        onChange={onToggle}
-        aria-label={entry.name}
-      />
-      <span>
-        <span className="choice-label">{entry.name}</span>
-        <span className="choice-desc">{entry.description}</span>
+    <li className={`pv-cond${checked ? ' is-on' : ''}`}>
+      <div className="pv-cond-row">
+        {/*
+          A real checkbox in a real label. The old markup was a clickable
+          block; this gives keyboard users the control they expect and gives
+          a screen reader the condition name as the checkbox's name.
+        */}
+        <label className="pv-cond-main">
+          <input
+            type="checkbox"
+            checked={checked}
+            disabled={disabled}
+            onChange={onToggle}
+          />
+          <span className="pv-cond-text">
+            <span className="pv-cond-name">{entry.name}</span>
+            <span className="pv-cond-desc">{entry.description}</span>
+          </span>
+        </label>
 
         <button
           type="button"
-          className="btn-linklike"
+          className="pv-icon-btn"
           aria-expanded={expanded}
+          aria-label={`What a family history of ${entry.name} means`}
           onClick={() => setExpanded((value) => !value)}
         >
-          {expanded ? 'Less' : 'What this means'}
+          <svg
+            viewBox="0 0 20 20"
+            width="20"
+            height="20"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden="true"
+            style={{
+              transform: expanded ? 'rotate(180deg)' : undefined,
+              transition: 'transform 200ms var(--ease)',
+            }}
+          >
+            <path d="m5 8 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </button>
+      </div>
 
-        {expanded ? (
-          <span className="choice-detail">
-            <span className="choice-relevance">
-              {RELEVANCE_COPY[entry.familyHistoryRelevance]}
-            </span>
-            <span>{entry.riskContext}</span>
-            <a
-              href={entry.sourceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="choice-source"
-            >
-              Read more at {entry.sourceName}
-            </a>
-          </span>
-        ) : null}
-      </span>
-    </div>
+      {expanded ? (
+        <div className="pv-cond-detail">
+          <p className="pv-cond-relevance">
+            {RELEVANCE_COPY[entry.familyHistoryRelevance]}
+          </p>
+          <p>{entry.riskContext}</p>
+          <a
+            href={entry.sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="pv-source"
+          >
+            Read more at {entry.sourceName}
+          </a>
+        </div>
+      ) : null}
+    </li>
   );
 }
 
@@ -105,7 +132,6 @@ export default function ConditionPicker({
   );
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<ConditionCategory | null>(null);
-  const searchRef = useRef<HTMLInputElement>(null);
 
   // Typing updates the input immediately; the 117-row list re-renders a
   // beat later. On a fast device the difference is invisible.
@@ -133,58 +159,27 @@ export default function ConditionPicker({
 
   return (
     <>
-      <div className="card-head">
-        <h2>Your family history</h2>
-        {!compact ? <span className="badge">Step 2 of 2</span> : null}
-      </div>
-
-      <p className="muted" style={{ marginBottom: 14 }}>
-        Search {CONDITION_COUNT} conditions and tick anything that runs in your
-        immediate family. Your daily plan is built from these. You can change
-        them whenever you like.
+      <h2>What runs in your family?</h2>
+      <p className="muted" style={{ margin: '8px 0 16px' }}>
+        Select conditions you know about. These are family-history conditions,
+        not a symptom checker, and picking one is not a diagnosis.
       </p>
 
-      <div className="search-wrap">
-        <input
-          ref={searchRef}
-          type="search"
-          className="search-input"
-          placeholder="Search conditions, e.g. diabetes, blood pressure"
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          autoComplete="off"
-          autoCorrect="off"
-          spellCheck={false}
-          enterKeyHint="search"
-        />
-        {query.length > 0 ? (
-          <button
-            type="button"
-            className="search-clear"
-            aria-label="Clear search"
-            onClick={() => {
-              setQuery('');
-              searchRef.current?.focus();
-            }}
-          >
-            &times;
-          </button>
-        ) : null}
-      </div>
+      <SearchInput
+        label={`Search ${CONDITION_COUNT} conditions`}
+        placeholder="Try diabetes, or blood pressure"
+        value={query}
+        onValueChange={setQuery}
+      />
 
-      <div className="chips" role="group" aria-label="Filter by category">
-        <button
-          type="button"
-          className={`chip${category === null ? ' chip-on' : ''}`}
-          onClick={() => setCategory(null)}
-        >
+      <div className="pv-rail" role="group" aria-label="Filter by category">
+        <Chip selected={category === null} onClick={() => setCategory(null)}>
           All {CONDITION_COUNT}
-        </button>
+        </Chip>
         {CATEGORY_SUMMARIES.map((summary) => (
-          <button
+          <Chip
             key={summary.category}
-            type="button"
-            className={`chip${category === summary.category ? ' chip-on' : ''}`}
+            selected={category === summary.category}
             onClick={() =>
               setCategory((current) =>
                 current === summary.category ? null : summary.category,
@@ -192,72 +187,75 @@ export default function ConditionPicker({
             }
           >
             {summary.label} {summary.count}
-          </button>
+          </Chip>
         ))}
       </div>
 
       {selected.size > 0 ? (
-        <div className="selected-bar">
-          <div className="row-between">
-            <strong>
+        <div className="pv-tray">
+          <div className="row-between" style={{ marginBottom: 8 }}>
+            <span className="label">
               {selected.size} of {MAX_SELECTIONS} selected
-            </strong>
+            </span>
             <button
               type="button"
-              className="btn-linklike"
+              className="pv-link-btn"
               onClick={() => setSelected(new Set())}
             >
               Clear all
             </button>
           </div>
-          <div className="chips" style={{ marginTop: 8 }}>
+          <div className="pv-chips">
             {[...selected].map((id) => (
-              <button
+              <Chip
                 key={id}
-                type="button"
-                className="chip chip-on chip-removable"
-                onClick={() => toggle(id)}
+                selected
+                removable
+                aria-pressed={undefined}
                 aria-label={`Remove ${getCondition(id)?.name ?? id}`}
+                onClick={() => toggle(id)}
               >
                 {getCondition(id)?.name ?? id}
-                <span aria-hidden="true">&times;</span>
-              </button>
+              </Chip>
             ))}
           </div>
         </div>
       ) : null}
 
       {atLimit ? (
-        <div className="notice info">
+        <Notice tone="info">
           That is the maximum of {MAX_SELECTIONS}. Remove one to add another.
           Past this the daily plan stops being a plan and becomes a list of
           everything.
-        </div>
+        </Notice>
       ) : null}
 
+      {/*
+        Announced politely so a screen-reader user hears the list shrink as
+        they type, instead of tabbing into a result count they cannot predict.
+      */}
+      <p className="pv-sr-only" role="status" aria-live="polite">
+        {results.length} condition{results.length === 1 ? '' : 's'} found
+      </p>
+
       {results.length === 0 ? (
-        <div className="empty-state">
-          <p>
-            Nothing matches <strong>{query.trim()}</strong>
-            {category ? ' in this category' : ''}.
-          </p>
-          <p className="faint">
-            Try a everyday word rather than a medical one, such as
-            &ldquo;blood pressure&rdquo; instead of &ldquo;hypertension&rdquo;.
-            {category ? ' You can also clear the category filter.' : ''}
-          </p>
-          {category ? (
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => setCategory(null)}
-            >
-              Search all categories
-            </button>
-          ) : null}
-        </div>
+        <EmptyState
+          title="No match"
+          action={
+            category ? (
+              <Button variant="secondary" onClick={() => setCategory(null)}>
+                Search all categories
+              </Button>
+            ) : null
+          }
+        >
+          Nothing matches &ldquo;{query.trim()}&rdquo;
+          {category ? ' in this category' : ''}. Try the everyday word rather
+          than the medical one, such as &ldquo;blood pressure&rdquo; instead of
+          &ldquo;hypertension&rdquo;.
+        </EmptyState>
       ) : (
-        <div className="condition-list">
+        <ul className="pv-cond-list">
           {results.map((entry) => {
             const checked = selected.has(entry.id);
             return (
@@ -270,39 +268,41 @@ export default function ConditionPicker({
               />
             );
           })}
-        </div>
+        </ul>
       )}
 
-      <button
-        type="button"
-        className="btn btn-primary"
-        style={{ marginTop: 12 }}
-        disabled={busy || selected.size === 0 || (compact && !dirty)}
-        onClick={() => onSave([...selected])}
-      >
-        {busy ? <span className="spinner" /> : null}
-        {selected.size === 0
-          ? 'Select at least one'
-          : busy
-            ? 'Saving'
-            : compact
-              ? 'Save changes'
-              : 'Build my plan'}
-      </button>
-
-      {compact ? (
-        <button
-          type="button"
-          className="btn btn-ghost"
-          style={{ marginTop: 8 }}
-          onClick={() => {
-            setSelected(new Set(initial));
-            onCancel?.();
-          }}
+      {/*
+        Sticky footer. The result list is long and the save action has to stay
+        reachable without scrolling back to the bottom of 117 rows.
+      */}
+      <div className="pv-picker-footer">
+        <Button
+          variant="primary"
+          offset
+          disabled={selected.size === 0 || (compact && !dirty)}
+          busy={busy}
+          busyLabel="Saving"
+          onClick={() => onSave([...selected])}
         >
-          Cancel
-        </button>
-      ) : null}
+          {selected.size === 0
+            ? 'Select at least one'
+            : compact
+              ? `Save changes · ${selected.size}`
+              : `Build my plan · ${selected.size} selected`}
+        </Button>
+
+        {compact ? (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setSelected(new Set(initial));
+              onCancel?.();
+            }}
+          >
+            Cancel
+          </Button>
+        ) : null}
+      </div>
     </>
   );
 }

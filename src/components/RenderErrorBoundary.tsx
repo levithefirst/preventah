@@ -41,17 +41,17 @@ export default class RenderErrorBoundary extends Component<Props, State> {
     if (!error) return this.props.children;
 
     return (
-      <section className="card">
-        <div className="card-head">
-          <h2>Something went wrong</h2>
-          <span className="badge bad">Display error</span>
+      <section className="pv-window has-offset" role="alert">
+        <div className="pv-bar pv-bar-blush">
+          <span>Display error</span>
         </div>
+        <h2 style={{ marginBottom: 12 }}>Something went wrong</h2>
         <p className="muted">
-          Preventah could not draw this screen. Your stake, your streak and
-          your funds are unaffected &mdash; this is a display fault only.
+          Preventah could not draw this screen. Your commitment, your streak
+          and your funds are unaffected &mdash; this is a display fault only.
           Reopening the app usually clears it.
         </p>
-        <div className="notice error" style={{ marginTop: 12 }}>
+        <div className="pv-notice pv-notice-error" style={{ marginTop: 12 }}>
           {error.name}: {error.message}
         </div>
         <p className="faint">
