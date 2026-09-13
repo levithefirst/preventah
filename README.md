@@ -123,6 +123,48 @@ numeric claim, because the app makes no numeric claims.
 
 ---
 
+## Design system
+
+Every surface in Preventah is the same shape: a cream sheet, a 2px ink edge,
+a blush sheet one step behind it, and optionally a bar across the top. The app
+icon is that shape, the plan item is that shape, the commitment card is that
+shape. The brand and the product are one system rather than a skin over a
+dashboard.
+
+| Token | Value | Used for |
+| --- | --- | --- |
+| canvas | `#C9B6EA` | The page field, app and site alike |
+| cream | `#F6F1E8` | Every surface |
+| ink | `#141414` | Text and every edge |
+| mint | `#B7D9C2` | Primary actions, and the bar that means *today* |
+| blush | `#E8B4B8` | The offset plate, one step behind |
+
+A few rules that are load-bearing rather than decorative:
+
+- **The bar colour says what kind of screen you are on.** Mint for habits,
+  ink for money and consent. The moment the app asks for real USDT looks
+  different from the moment it asks about a walk.
+- **The offset plate is rationed** to primary objects, two or three a screen.
+  On every row it makes the page vibrate.
+- **Nothing is colour-coded as a diagnosis.** Semantic colours are calm text
+  colours on cream, used for process states like a pending transaction. No
+  blood pressure reading and no family condition is ever painted as good or
+  bad, and a missed day is cream rather than red.
+- **Body text is never below 15px, and inputs are pinned at exactly 16px**,
+  because below that iOS zooms the WebView on focus and strands the user in a
+  magnified layout they cannot easily escape inside a Mini App.
+- **Depth is the offset plate, not a shadow.** The one box-shadow in the
+  system is a zero-blur one, which is how the plate is drawn.
+
+Typography is Bricolage Grotesque on titles and Plus Jakarta Sans on body,
+self-hosted by `next/font` at only the four weights actually used.
+
+Motion is CSS only: an 80ms press, a 120ms chip fill, a 200ms disclosure.
+`prefers-reduced-motion` turns all of it off. There is no animation library,
+and no runtime dependency was added for the design at all.
+
+---
+
 ## Security model
 
 The app custodies real user funds, so a few things are deliberate:
@@ -199,6 +241,19 @@ npm run db:init                # applies db/schema.sql
 npm run dev
 ```
 
+### Routes
+
+| Route | What it is |
+| --- | --- |
+| `/` | The Mini App inside Nimiq Pay, the public home page outside it |
+| `/how-it-works`, `/prevention`, `/privacy`, `/faq` | Public, static, no wallet needed |
+| `/api/*` | Same-origin API, unchanged by the redesign |
+
+`/` stays the Mini App mount because that URL is the registered Nimiq Pay
+deeplink target. It decides at runtime: if the host handshake finds Nimiq Pay
+it renders the app, and otherwise the visitor gets the site rather than a
+connect button with no wallet behind it.
+
 ### Environment variables
 
 Set these in the Vercel dashboard for a deployment. See `.env.example`.
@@ -233,6 +288,11 @@ npm run build   # production build
 ```
 db/schema.sql                Postgres schema, idempotent
 scripts/db-init.mjs          Schema, catalog sync and migration, all idempotent
+public/brand/                Mark, mono mark and lockup as SVG
+src/app/globals.css          Design tokens and the component system
+src/components/brand/        The mark, inline and reusable
+src/components/ui/           Window, Button, Field, Chip, Badge, Toast, States
+src/components/site/         Public website sections and chrome
 src/lib/condition-types.ts   Category and plan-tag vocabulary
 src/lib/condition-catalog.ts 117 conditions with sources and plan tags
 src/lib/condition-index.ts   Lookup and deterministic search

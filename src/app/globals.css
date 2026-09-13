@@ -1548,16 +1548,20 @@ a {
   background: var(--color-cream-2);
 }
 
+/*
+  One scroll region, not two.
+
+  This list used to cap its own height and scroll internally, which meant a
+  phone had a scrolling list inside a scrolling page: momentum fights at the
+  boundary, and a sticky footer with no stable viewport edge to stick to.
+  The page scrolls; the footer sticks to the bottom of the screen. 117 rows
+  is a long page, which is what the search field and the category rail are
+  for.
+*/
 .pv-cond-list {
   list-style: none;
   margin: var(--space-4) 0 0;
   padding: 0;
-  /* Cap the list rather than the page: 117 rows is a very long scroll, and a
-     contained one keeps the sticky footer honest. */
-  max-height: 54vh;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
 }
 
 .pv-cond {
