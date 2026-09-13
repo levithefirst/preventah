@@ -18,6 +18,7 @@ import Masthead from './Masthead';
 import ConsentCard from './ConsentCard';
 import ConditionsCard from './ConditionsCard';
 import ProgressCard from './ProgressCard';
+import ReminderCard from './ReminderCard';
 import PlanCard from './PlanCard';
 import CommitmentCard from './CommitmentCard';
 import HistoryCard from './HistoryCard';
@@ -448,6 +449,8 @@ export default function App() {
             onRecord={recordMeasurement}
             onDelete={deleteMeasurement}
           />
+
+          <ReminderCard />
 
           <HistoryCard history={state.history} />
 

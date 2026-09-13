@@ -1010,3 +1010,12 @@ a {
 .series-list .mono {
   font-variant-numeric: tabular-nums;
 }
+
+/* --- reminder ------------------------------------------------------------ */
+
+.reminder-btn {
+  width: auto;
+  flex-shrink: 0;
+  margin: 0;
+  text-decoration: none;
+}
