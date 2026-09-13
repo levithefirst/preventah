@@ -1,42 +1,53 @@
 'use client';
 
 import type { ActiveStakeView, AppState } from '@/lib/state';
+import { addUtcDays, todayIso, utcDayOfWeek } from '@/lib/dates';
 import TxReference from './TxReference';
-import { diagMark } from '@/lib/diag';
-
-/** UTC date string N days after `iso`. */
-function addDays(iso: string, days: number): string {
-  const ms = Date.parse(`${iso}T00:00:00Z`) + days * 86_400_000;
-  return new Date(ms).toISOString().slice(0, 10);
-}
-
-function todayUtc(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 const WEEKDAY = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
+/**
+ * One tile per day of the commitment window.
+ *
+ * Every date operation here goes through the total helpers in lib/dates:
+ * an unreadable end date yields null and this renders a short fallback,
+ * rather than throwing RangeError out of render and taking the whole
+ * authenticated screen down with it.
+ */
 function StreakDots({ stake }: { stake: ActiveStakeView }) {
-  // The window runs backwards from its end date, so the first dot is the
+  // The window runs backwards from its end date, so the first tile is the
   // day the stake was confirmed.
-  const start = addDays(stake.endsOn, -(stake.windowDays - 1));
-  const today = todayUtc();
+  const start = addUtcDays(stake.endsOn, -(stake.windowDays - 1));
+
+  if (start === null) {
+    return (
+      <p className="faint">
+        {stake.checkinCount} of {stake.targetDays} days checked in.
+      </p>
+    );
+  }
+
+  const today = todayIso();
   const done = new Set(stake.checkinDates);
 
   return (
     <div className="dots">
       {Array.from({ length: stake.windowDays }, (_, i) => {
-        const date = addDays(start, i);
+        const date = addUtcDays(start, i);
+        if (date === null) return null;
+
         const isDone = done.has(date);
         const isToday = date === today;
-        const label = WEEKDAY[new Date(`${date}T00:00:00Z`).getUTCDay()];
+        const weekday = utcDayOfWeek(date);
+        const label = weekday === null ? '\u2022' : WEEKDAY[weekday];
+
         return (
           <div
             key={date}
             className={`dot${isDone ? ' done' : ''}${isToday ? ' today' : ''}`}
             title={date}
           >
-            {isDone ? '✓' : label}
+            {isDone ? '\u2713' : label}
           </div>
         );
       })}
@@ -65,7 +76,6 @@ export default function CommitmentCard({
   onCheckIn: () => void;
   onRecheck: () => void;
 }) {
-  diagMark('render_commitment_card'); // TEMPORARY DIAGNOSTIC
   const stake = state.activeStake;
 
   // --- No commitment yet ---------------------------------------------------
@@ -117,7 +127,6 @@ export default function CommitmentCard({
 
   // --- Stake broadcast, waiting on confirmations ---------------------------
   if (stake.status === 'pending') {
-    diagMark('render_commitment_pending'); // TEMPORARY DIAGNOSTIC
     return (
       <section className="card">
         <div className="card-head">
@@ -187,10 +196,12 @@ export default function CommitmentCard({
         <h2>Your streak</h2>
         {stake.targetMet ? (
           <span className="badge ok">Target reached</span>
-        ) : (
+        ) : stake.daysRemaining !== null ? (
           <span className="badge">
             {stake.daysRemaining} day{stake.daysRemaining === 1 ? '' : 's'} left
           </span>
+        ) : (
+          <span className="badge">In progress</span>
         )}
       </div>
 

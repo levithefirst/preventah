@@ -12,8 +12,7 @@ import {
   signLoginMessage,
   type HostInfo,
 } from '@/lib/wallet';
-import { diagBeacon, diagMark, setDiagId } from '@/lib/diag';
-import DiagnosticBoundary from './DiagnosticBoundary';
+import RenderErrorBoundary from './RenderErrorBoundary';
 import Masthead from './Masthead';
 import ConsentCard from './ConsentCard';
 import ConditionsCard from './ConditionsCard';
@@ -42,28 +41,6 @@ async function api(path: string, init?: RequestInit): Promise<ApiResult> {
     return (await response.json()) as ApiResult;
   } catch {
     return { ok: false, error: 'The server sent an unreadable response.' };
-  }
-}
-
-/**
- * TEMPORARY DIAGNOSTIC - remove once the Nimiq Pay sign-in failure is
- * understood. Emits a safe step marker with a correlation id.
- *
- * Never carries the signature, the nonce, the signed message, the wallet
- * address, cookies or any health data - only a step name, a random id and
- * elapsed milliseconds.
- *
- * These run in the WebView, so they are lost if the WebView itself dies.
- * The durable half of this trace is the pair of server-side markers logged
- * by /api/auth/nonce and /api/auth/verify.
- */
-function authStep(step: string, requestId: string, startedAt: number): void {
-  try {
-    console.info(
-      `AUTH_STEP=${step} requestId=${requestId} elapsedMs=${Date.now() - startedAt}`,
-    );
-  } catch {
-    // Logging must never break the flow it is observing.
   }
 }
 
@@ -194,20 +171,11 @@ export default function App() {
     setBusy('connect');
     setError(null);
 
-    // TEMPORARY DIAGNOSTIC - correlation id for this sign-in attempt.
-    const requestId = Math.random().toString(16).slice(2, 10);
-    const startedAt = Date.now();
-    setDiagId(requestId);
 
     try {
-      authStep('before_request_accounts', requestId, startedAt);
       const address = await connectEvmAccount();
-      authStep('after_request_accounts', requestId, startedAt);
 
-      const challenge = await api('/api/auth/nonce', {
-        method: 'POST',
-        body: JSON.stringify({ requestId }),
-      });
+      const challenge = await api('/api/auth/nonce', { method: 'POST' });
       if (!challenge.ok) {
         setError(challenge.error ?? 'Could not start the login.');
         return;
@@ -218,34 +186,25 @@ export default function App() {
         message: string;
       };
 
-      authStep('before_personal_sign', requestId, startedAt);
       const signature = await signLoginMessage(address, message);
-      authStep('after_personal_sign', requestId, startedAt);
 
       const verified = await api('/api/auth/verify', {
         method: 'POST',
-        body: JSON.stringify({ address, signature, nonce, requestId }),
+        body: JSON.stringify({ address, signature, nonce }),
       });
       if (!verified.ok) {
         setError(verified.error ?? 'Could not verify your wallet.');
         return;
       }
-      authStep('after_auth_verify', requestId, startedAt);
 
       const me = await api('/api/me');
-      authStep('me_response_received', requestId, startedAt);
 
       const applied = apply(me);
-      authStep(`after_apply_me_ok=${applied}`, requestId, startedAt);
 
       if (applied) {
-        authStep('before_set_phase_ready', requestId, startedAt);
         setPhase('ready');
-        authStep('after_set_phase_ready', requestId, startedAt);
       }
-      authStep('after_session_loaded', requestId, startedAt);
     } catch (err) {
-      authStep('caught_error', requestId, startedAt);
       handleWalletError(err);
     } finally {
       setBusy(null);
@@ -345,15 +304,6 @@ export default function App() {
     setBusy(null);
   }, []);
 
-  // TEMPORARY DIAGNOSTIC - fires only after the whole authenticated tree has
-  // mounted. Its presence in the Vercel log proves render survived; its
-  // absence proves the WebView died during render.
-  useEffect(() => {
-    if (phase !== 'ready' || !state) return;
-    diagMark('authenticated_tree_committed');
-    diagBeacon('render_committed');
-  }, [phase, state]);
-
   // Clear the flash message after a moment so it does not linger.
   useEffect(() => {
     if (!flash) return;
@@ -436,7 +386,6 @@ export default function App() {
     );
   }
 
-  diagMark('authenticated_branch_render_begin');
 
   const short = `${state.address.slice(0, 6)}...${state.address.slice(-4)}`;
 
@@ -445,7 +394,7 @@ export default function App() {
       <Masthead subtitle={short} />
       {notices}
 
-      <DiagnosticBoundary>
+      <RenderErrorBoundary>
       {!state.hasConsent ? (
         <ConsentCard
           consentVersion={state.consentVersion}
@@ -494,7 +443,7 @@ export default function App() {
           </div>
         </>
       )}
-      </DiagnosticBoundary>
+      </RenderErrorBoundary>
 
       <p className="footer-note">
         Preventah gives general lifestyle guidance, not medical advice. It does

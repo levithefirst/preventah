@@ -1,7 +1,6 @@
 'use client';
 
 import type { DailyPlan, PlanItem } from '@/lib/plans';
-import { diagMark } from '@/lib/diag';
 
 const SLOTS: { key: keyof Pick<DailyPlan, 'diet' | 'exercise' | 'habit'>; label: string; icon: string }[] = [
   { key: 'diet', label: 'Diet', icon: '\u{1F957}' },
@@ -31,7 +30,6 @@ function Row({ item, label, icon }: { item: PlanItem; label: string; icon: strin
  * own, because plan resolution is synchronous and cannot fail.
  */
 export default function PlanCard({ plan }: { plan: DailyPlan }) {
-  diagMark('render_plan_card'); // TEMPORARY DIAGNOSTIC
   return (
     <section className="card">
       <div className="card-head">

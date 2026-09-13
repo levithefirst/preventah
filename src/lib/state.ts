@@ -10,6 +10,7 @@ import {
   formatUsdt,
 } from './config';
 import type { ConditionKey } from './conditions';
+import { daysUntilInclusive, toIsoDate, todayIso } from './dates';
 import { calendarDayIndex, dayIndexSince, getDailyPlan, type DailyPlan } from './plans';
 import {
   getActiveStake,
@@ -47,12 +48,13 @@ export interface ActiveStakeView {
   txHash: string;
   targetDays: number;
   windowDays: number;
-  endsOn: string;
+  endsOn: string | null;
   checkinCount: number;
   checkinDates: string[];
   checkedInToday: boolean;
   dayIndex: number;
-  daysRemaining: number;
+  /** Null when the end date cannot be read, so the UI shows a fallback. */
+  daysRemaining: number | null;
   targetMet: boolean;
 }
 
@@ -65,19 +67,12 @@ export interface StakeHistoryView {
   targetDays: number;
   targetMet: boolean;
   startedAt: string;
-  endsOn: string;
+  endsOn: string | null;
   payoutTxHash: string | null;
 }
 
 function todayUtc(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-/** Whole days from today until `endsOn` inclusive. Never negative. */
-function daysRemaining(endsOn: string): number {
-  const end = Date.parse(`${endsOn}T00:00:00Z`);
-  const today = Date.parse(`${todayUtc()}T00:00:00Z`);
-  return Math.max(0, Math.round((end - today) / 86_400_000) + 1);
+  return todayIso();
 }
 
 export async function buildState(user: UserRow): Promise<AppState> {
@@ -105,12 +100,12 @@ export async function buildState(user: UserRow): Promise<AppState> {
       txHash: stake.stake_tx_hash,
       targetDays: stake.target_days,
       windowDays: stake.window_days,
-      endsOn: stake.ends_on,
+      endsOn: toIsoDate(stake.ends_on),
       checkinCount: dates.length,
       checkinDates: dates,
       checkedInToday: dates.includes(todayUtc()),
       dayIndex: planDayIndex,
-      daysRemaining: daysRemaining(stake.ends_on),
+      daysRemaining: daysUntilInclusive(stake.ends_on),
       targetMet: dates.length >= stake.target_days,
     };
   }
@@ -131,7 +126,7 @@ export async function buildState(user: UserRow): Promise<AppState> {
       targetDays: row.target_days,
       targetMet: row.target_met,
       startedAt: row.started_at,
-      endsOn: row.ends_on,
+      endsOn: toIsoDate(row.ends_on),
       payoutTxHash: row.payout_tx_hash,
     })),
     config: {

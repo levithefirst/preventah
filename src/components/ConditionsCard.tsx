@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { CONDITIONS, type ConditionKey } from '@/lib/conditions';
-import { diagMark } from '@/lib/diag';
 
 /**
  * The fixed hereditary risk checklist.
@@ -26,8 +25,6 @@ export default function ConditionsCard({
   );
   const [open, setOpen] = useState(!compact);
 
-  // TEMPORARY DIAGNOSTIC
-  diagMark(`render_conditions_card_compact=${compact === true}`);
 
   function toggle(key: ConditionKey) {
     setSelected((prev) => {

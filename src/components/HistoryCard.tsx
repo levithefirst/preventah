@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import type { StakeHistoryView } from '@/lib/state';
-import { diagMark } from '@/lib/diag';
 
 const STATUS_LABEL: Record<StakeHistoryView['status'], { text: string; tone: string }> = {
   pending: { text: 'Confirming', tone: 'warn' },
@@ -41,7 +40,6 @@ function PayoutHash({ hash }: { hash: string }) {
 }
 
 export default function HistoryCard({ history }: { history: StakeHistoryView[] }) {
-  diagMark('render_history_card'); // TEMPORARY DIAGNOSTIC
   if (history.length === 0) return null;
 
   return (

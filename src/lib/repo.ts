@@ -144,7 +144,11 @@ function hydrate(row: RawStakeRow): StakeRow {
 const STAKE_SELECT = `
   s.id, s.user_id, s.wallet_address, s.amount_base, s.reward_base,
   s.stake_tx_hash, s.status, s.target_days, s.window_days,
-  s.started_at, s.ends_on, s.target_met,
+  s.started_at, s.target_met,
+  -- Cast to text here, exactly as getCheckinDates does for checkin_date.
+  -- Left as a bare date column, the driver yields a Date object that JSON
+  -- encodes to a full ISO timestamp, not the YYYY-MM-DD the client expects.
+  to_char(s.ends_on, 'YYYY-MM-DD') AS ends_on,
   s.payout_tx_hash, s.payout_at, s.payout_error,
   (SELECT count(*) FROM checkins c WHERE c.stake_id = s.id) AS checkin_count
 `;
