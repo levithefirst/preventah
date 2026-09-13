@@ -30,15 +30,21 @@ export default function ConsentCard({
       </div>
 
       <p className="muted">
-        Preventah builds your daily plan from hereditary risk categories you
-        pick from a fixed list. That is health information, so we ask first.
+        Preventah builds your daily plan from conditions you pick from a
+        fixed list, and can track measurements you choose to record. That is
+        health information, so we ask first.
       </p>
 
       <h3 style={{ marginTop: 16, marginBottom: 8 }}>What we store</h3>
       <ul className="consent-list">
         <li>
-          The risk categories you tick, as short codes such as{' '}
-          <code>hypertension</code>. Nothing else.
+          The conditions you tick, as short codes such as{' '}
+          <code>hypertension</code>. Nothing else about them.
+        </li>
+        <li>
+          Any measurements you choose to record, such as weight or blood
+          pressure: a number, a unit and a date. Recording them is optional
+          and you can delete any of them at any time.
         </li>
         <li>Your wallet address, your stake, and which days you checked in.</li>
       </ul>
@@ -57,13 +63,23 @@ export default function ConsentCard({
           Which relative, which diagnosis, or any clinical detail. Family
           history is a yes-or-no flag.
         </li>
+        <li>
+          Anything from a wearable, a fitness tracker, Apple Health or Google
+          Fit. Preventah connects to nothing. Every number here is one you
+          typed.
+        </li>
       </ul>
 
       <h3 style={{ marginTop: 16, marginBottom: 8 }}>Your control</h3>
       <ul className="consent-list">
         <li>
           You can withdraw consent at any time from the bottom of the main
-          screen. Your selections are deleted immediately when you do.
+          screen. Your selections and measurements are deleted immediately
+          when you do.
+        </li>
+        <li>
+          Withdrawing consent never affects a commitment already running.
+          Your stake is still returned and you can still check in.
         </li>
         <li>Your data is never sold, shared, or used to train anything.</li>
       </ul>
@@ -75,8 +91,9 @@ export default function ConsentCard({
           onChange={(event) => setAgreed(event.target.checked)}
         />
         <span>
-          I consent to Preventah storing the risk categories I select, so it
-          can build my daily prevention plan.
+          I consent to Preventah storing the conditions I select and any
+          measurements I choose to record, so it can build my daily
+          prevention plan and show me my progress.
         </span>
       </label>
 

@@ -409,11 +409,36 @@ export default function App() {
 
       <RenderErrorBoundary>
       {!state.hasConsent ? (
-        <ConsentCard
-          consentVersion={state.consentVersion}
-          busy={busy === 'consent'}
-          onAccept={acceptConsent}
-        />
+        <>
+          <ConsentCard
+            consentVersion={state.consentVersion}
+            busy={busy === 'consent'}
+            onAccept={acceptConsent}
+          />
+
+          {/*
+            A commitment is money and a streak, not health data. Consent
+            covers what Preventah stores about your family history and your
+            measurements, and withdrawing it must never cost you either. So
+            a running commitment stays visible and checkable while consent
+            is absent, with the general plan rather than a tailored one.
+          */}
+          {state.activeStake ? (
+            <>
+              <PlanCard plan={state.plan} />
+
+              <CommitmentCard
+                state={state}
+                busy={busy}
+                pendingReason={pendingReason}
+                verifyStalled={verifyStalled}
+                onStake={stake}
+                onCheckIn={checkIn}
+                onRecheck={recheckStake}
+              />
+            </>
+          ) : null}
+        </>
       ) : state.selections.length === 0 ? (
         <ConditionsCard
           initial={state.selections}

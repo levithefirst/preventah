@@ -41,8 +41,19 @@ export const STAKE_AMOUNT_USDT = Number(
 export const TARGET_DAYS = 5;
 export const WINDOW_DAYS = 7;
 
-/** Bump this string whenever the consent copy changes materially. */
-export const CONSENT_VERSION = '2026-09-12.v1';
+/**
+ * Bump this string whenever the consent copy changes materially.
+ *
+ * A bump makes every existing consent row inactive, so people are asked
+ * again rather than being held to wording they never read. v2 widened the
+ * scope from condition selections to measurements as well.
+ *
+ * Bumping does not delete anything and does not interrupt a commitment: a
+ * running stake stays checkable while consent is absent, and selections
+ * stay in the database but are not returned or used until consent is given
+ * again.
+ */
+export const CONSENT_VERSION = '2026-09-13.v2';
 
 /** Hex chain id as required by wallet_switchEthereumChain. */
 export const CHAIN_ID_HEX = `0x${CHAIN_ID.toString(16)}`;
