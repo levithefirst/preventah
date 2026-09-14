@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Preventah">
+  <title>Preventah maskable app icon</title>
+  <!--
+    The maskable variant. Identical to preventah-app-icon.svg except the mark
+    is pulled in to ~55% of the canvas, so every pixel of it sits inside the
+    40%-radius safe circle that the maskable spec guarantees will survive
+    whatever shape a launcher crops to. The cream bleeds to the edge and
+    absorbs the crop.
+  -->
+  <rect width="512" height="512" fill="#F6F1E8" />
+
+  <defs>
+    <clipPath id="pv-mask-front">
+      <rect x="2" y="2" width="52" height="52" rx="14" />
+    </clipPath>
+  </defs>
+
+  <g transform="translate(106,106) scale(5)">
+    <rect x="6" y="6" width="52" height="52" rx="14" fill="#E8B4B8" />
+    <rect x="2" y="2" width="52" height="52" rx="14" fill="#F6F1E8" />
+
+    <g clip-path="url(#pv-mask-front)">
+      <rect x="2" y="2" width="52" height="12" fill="#B7D9C2" />
+      <g stroke="#8FC4A3" stroke-width="1" opacity="0.5">
+        <path d="M10.5 2v12M19 2v12M27.5 2v12M36 2v12M44.5 2v12" />
+        <path d="M2 7.5h52" />
+      </g>
+    </g>
+
+    <rect x="2" y="2" width="52" height="52" rx="14" fill="none" stroke="#141414" stroke-width="2.5" />
+    <path d="M2 14h52" stroke="#141414" stroke-width="2.5" />
+    <path fill="#141414" fill-rule="evenodd"
+      d="M16 21h15.5a8.5 8.5 0 0 1 0 17h-7v9H16V21Zm8.5 5h6.5a3.5 3.5 0 0 1 0 7h-6.5v-7Z" />
+  </g>
+</svg>

@@ -1,4 +1,4 @@
-import { CHAIN_ID, STAKE_AMOUNT_USDT, USDT_ADDRESS, toBaseUnits } from '@/lib/config';
+import { CHAIN_ID, STAKE_AMOUNT_BASE, USDT_ADDRESS } from '@/lib/config';
 import { verifyStakeTransaction } from '@/lib/chain';
 import { escrowAddress } from '@/lib/server-env';
 import {
@@ -55,7 +55,16 @@ export async function POST(request: Request) {
       return fail('This transaction has already been registered.', 409);
     }
 
-    const expected = toBaseUnits(STAKE_AMOUNT_USDT);
+    /*
+      The server's own number, not the client's.
+
+      The browser never sends an amount, and this route never reads one from
+      the request: it takes STAKE_AMOUNT_BASE and verifies the on-chain
+      transfer against it. A client that transferred a different amount gets
+      its stake rejected by verifyStakeTransaction rather than recorded at
+      whatever it paid.
+    */
+    const expected = STAKE_AMOUNT_BASE;
     const stake = await createPendingStake({
       userId: user.id,
       walletAddress: user.wallet_address,

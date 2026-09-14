@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Preventah">
+  <title>Preventah app icon</title>
+  <!--
+    The app icon: the Preventah window on a full-bleed cream field.
+
+    Source of truth for every raster icon in /public/icons. Those PNGs exist
+    because native hosts - the Nimiq Pay Mini Apps list, Android's launcher,
+    iOS's home screen - generally cannot decode SVG and fall back to a
+    generic globe when that is all they find. Browsers keep the SVG favicon.
+
+    Composition rules, and why:
+      - Full-bleed cream, never transparent. A transparent icon gets a black
+        or white square behind it on some launchers.
+      - The mark occupies the middle ~70%, so a circular or squircle mask
+        cannot clip the P. The maskable variant pulls it in further still.
+      - No wordmark. At 48px "Preventah" is a grey smear.
+  -->
+  <rect width="512" height="512" fill="#F6F1E8" />
+
+  <defs>
+    <clipPath id="pv-icon-front">
+      <rect x="2" y="2" width="52" height="52" rx="14" />
+    </clipPath>
+  </defs>
+
+  <!-- The 64-unit mark, scaled to 70% of the canvas and optically centred.
+       Its drawn content spans x/y 2..58, so the centre of that box (30) is
+       what has to land on 256, not the centre of the viewBox. -->
+  <g transform="translate(64,64) scale(6.4)">
+    <rect x="6" y="6" width="52" height="52" rx="14" fill="#E8B4B8" />
+    <rect x="2" y="2" width="52" height="52" rx="14" fill="#F6F1E8" />
+
+    <g clip-path="url(#pv-icon-front)">
+      <rect x="2" y="2" width="52" height="12" fill="#B7D9C2" />
+      <g stroke="#8FC4A3" stroke-width="1" opacity="0.5">
+        <path d="M10.5 2v12M19 2v12M27.5 2v12M36 2v12M44.5 2v12" />
+        <path d="M2 7.5h52" />
+      </g>
+    </g>
+
+    <rect x="2" y="2" width="52" height="52" rx="14" fill="none" stroke="#141414" stroke-width="2.5" />
+    <path d="M2 14h52" stroke="#141414" stroke-width="2.5" />
+    <path fill="#141414" fill-rule="evenodd"
+      d="M16 21h15.5a8.5 8.5 0 0 1 0 17h-7v9H16V21Zm8.5 5h6.5a3.5 3.5 0 0 1 0 7h-6.5v-7Z" />
+  </g>
+</svg>

@@ -1976,3 +1976,45 @@ a {
     padding-top: var(--space-8);
   }
 }
+
+/* === 24. Reminder ======================================================== */
+
+.pv-reminder-cta {
+  margin-top: var(--space-2);
+}
+
+/*
+  The fallback path is a disclosure rather than three buttons in a row. Most
+  people will never need it, and a calendar reminder that offers three ways
+  to do one thing looks broken before it is.
+*/
+.pv-reminder-alt {
+  margin-top: var(--space-3);
+}
+
+.pv-reminder-alt > summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: var(--text-caption);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.pv-reminder-alt > summary::-webkit-details-marker {
+  display: none;
+}
+
+.pv-reminder-alt-body {
+  padding: var(--space-3) 0 0;
+}
+
+.pv-reminder-alt-body .pv-tx-hash {
+  margin-top: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-cream-2);
+}

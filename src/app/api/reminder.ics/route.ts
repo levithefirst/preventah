@@ -1,68 +1,79 @@
 import {
   DEFAULT_REMINDER_HOUR,
   DEFAULT_REMINDER_MINUTE,
-  MAX_OCCURRENCES,
   buildReminderIcs,
 } from '@/lib/ics';
 import { todayIso } from '@/lib/dates';
-import { requireUser } from '@/lib/api';
-import { getActiveStake } from '@/lib/repo';
-import { daysUntilInclusive } from '@/lib/dates';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-/**
- * The daily reminder, as a downloadable calendar file.
- *
- * Returns text/calendar rather than JSON, because the point is for the
- * WebView to hand the response to the operating system, which opens it in
- * whatever calendar app the user already has. No OAuth, no calendar API,
- * no token stored anywhere.
- *
- * The file contains no health data and no wallet address. A calendar entry
- * syncs to other devices and is sometimes visible to a household, so it
- * says "Preventah check-in" and nothing more.
- */
-export async function GET(request: Request) {
-  const user = await requireUser();
-  if (!user) {
-    return new Response('Not signed in.', { status: 401 });
-  }
+/** Daily occurrences in the generated series. */
+const OCCURRENCES = 30;
 
+/**
+ * The daily reminder, as a calendar file.
+ *
+ * Deliberately unauthenticated, and deliberately carrying nothing derived
+ * from a user.
+ *
+ * It used to require a session and stamp the event UID with the user's
+ * stake id. Both were mistakes:
+ *
+ *  - The session made the endpoint useless at the exact moment it needed to
+ *    work. A WebView that cannot render text/calendar hands the URL to a
+ *    download manager or an external browser, neither of which carries the
+ *    Mini App's cookie, so the user got "Not signed in." instead of a
+ *    calendar entry.
+ *  - The stake id put a correlator into a file that syncs to a user's other
+ *    devices and is sometimes visible to a household, which is the opposite
+ *    of what this file is supposed to be.
+ *
+ * The response is now a pure function of the query string. There is nothing
+ * in it worth authenticating: a time of day, a generic title, and a
+ * recurrence rule. No health data, no wallet address, no commitment
+ * amount, no stake reference.
+ */
+export function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const hour = Number(params.get('hour') ?? DEFAULT_REMINDER_HOUR);
   const minute = Number(params.get('minute') ?? DEFAULT_REMINDER_MINUTE);
-
-  // Cover the rest of an active commitment, or a month for someone who has
-  // not committed yet. buildReminderIcs clamps anything out of range.
-  let occurrences = 30;
-  let uidSuffix = 'general';
-  try {
-    const stake = await getActiveStake(user.id);
-    if (stake) {
-      uidSuffix = stake.id;
-      occurrences = daysUntilInclusive(stake.ends_on) ?? 30;
-    }
-  } catch {
-    // A reminder is worth having even if the stake lookup fails. Fall
-    // through to the 30-day default rather than returning an error.
-  }
 
   const ics = buildReminderIcs({
     hour,
     minute,
     startDate: todayIso(),
-    occurrences: Math.min(Math.max(occurrences, 1), MAX_OCCURRENCES),
-    uidSuffix,
+    occurrences: OCCURRENCES,
+    // Stable for a given reminder time, so re-importing the same reminder
+    // updates the existing entry rather than stacking a second daily alarm.
+    // Derived from the requested time only: nothing here identifies anyone.
+    uidSuffix: uidFor(hour, minute),
   });
 
   return new Response(ics, {
     status: 200,
     headers: {
       'content-type': 'text/calendar; charset=utf-8',
-      'content-disposition': 'attachment; filename="preventah-checkin.ics"',
+      /*
+        inline, not attachment.
+
+        `attachment` forces the WebView's download path, which on Android
+        does nothing at all unless the host app has installed a
+        DownloadListener. `inline` lets an engine that understands
+        text/calendar hand it straight to the calendar app, which is what
+        iOS does, and leaves the filename available for everything else.
+      */
+      'content-disposition': 'inline; filename="preventah-checkin.ics"',
       'cache-control': 'no-store',
     },
   });
+}
+
+/** `0800`-style suffix. Padded so the UID is stable regardless of input form. */
+function uidFor(hour: number, minute: number): string {
+  const safe = (value: number, max: number) =>
+    Number.isFinite(value) && value >= 0 && value <= max
+      ? String(Math.floor(value)).padStart(2, '0')
+      : '00';
+  return `${safe(hour, 23)}${safe(minute, 59)}`;
 }

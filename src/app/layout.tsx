@@ -36,9 +36,24 @@ export const metadata: Metadata = {
   description:
     'Turn what runs in your family into a clear daily prevention plan, backed by a real USDT commitment you approve in Nimiq Pay.',
   applicationName: 'Preventah',
+  /*
+    Two different jobs, two different assets.
+
+    The browser tab gets the SVG favicon, which is drawn for 16-32px. Every
+    application surface - iOS home screen, Android launcher, any host that
+    scrapes for an app icon - gets PNG, because native icon loaders
+    generally cannot decode SVG and fall back to a generic globe when SVG is
+    all they find. That fallback is exactly what Preventah was showing.
+  */
   icons: {
-    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
-    apple: [{ url: '/brand/preventah-mark.svg' }],
+    icon: [
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
   },
   openGraph: {
     title: 'Preventah — Stay ahead of family history',

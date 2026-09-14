@@ -27,15 +27,33 @@ export const ESCROW_WALLET_ADDRESS = (
 ).toLowerCase();
 
 /**
- * Default commitment size for a NEW stake, in whole USDT.
+ * Commitment size for a NEW stake, in whole USDT.
  *
- * Only new commitments read this. An existing stake is always settled and
+ * Compiled in, deliberately not configurable at runtime.
+ *
+ * This used to read NEXT_PUBLIC_STAKE_AMOUNT_USDT with 0.1 as a fallback,
+ * which meant the amount a user was actually asked to transfer depended on
+ * a dashboard field nobody reviews and git could not show. For a value
+ * denominated in real money that is the wrong trade: an environment
+ * variable that can silently change what the app charges is a hidden
+ * default, not a feature. Changing the amount is now a code change, with a
+ * diff and a test.
+ *
+ * Only NEW commitments read this. An existing stake is settled and
  * re-verified against the amount_base recorded on its own row, so changing
- * this never reprices a commitment somebody already paid.
+ * this value never reprices a commitment somebody already paid for. The
+ * live 1.00 USDT commitment predates this change and is unaffected by it.
  */
-export const STAKE_AMOUNT_USDT = Number(
-  process.env.NEXT_PUBLIC_STAKE_AMOUNT_USDT ?? 0.1,
-);
+export const STAKE_AMOUNT_USDT = 0.1;
+
+/**
+ * The same amount in integer base units, which is what actually moves.
+ *
+ * Exported so both the client and the server can assert against one number
+ * rather than each recomputing it. 0.1 USDT at 6 decimals is exactly
+ * 100000 base units, with no remainder and no float involved.
+ */
+export const STAKE_AMOUNT_BASE = 100_000n;
 
 /** Commitment shape: check in on 5 separate days inside a 7-day window. */
 export const TARGET_DAYS = 5;

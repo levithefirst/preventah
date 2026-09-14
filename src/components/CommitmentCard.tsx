@@ -226,6 +226,15 @@ export default function CommitmentCard({
   // --- Streak running or target reached ------------------------------------
   const remaining = Math.max(0, stake.targetDays - stake.checkinCount);
 
+  /*
+    A running commitment was priced when it was made, and nothing reprices
+    it. If the default has moved since, say so on the card rather than
+    letting the number look like a bug or, worse, like we quietly converted
+    somebody's 1.00 USDT into 0.10.
+  */
+  const pricedDifferently =
+    Number(stake.amountUsdt) !== state.config.stakeAmountUsdt;
+
   return (
     <Window
       bar={stake.checkedInToday ? 'Checked in' : 'Today'}
@@ -258,6 +267,14 @@ export default function CommitmentCard({
         <span className="label">Committed</span>
         <span className="amount">{stake.amountUsdt} USDT</span>
       </div>
+
+      {pricedDifferently ? (
+        <p className="faint" style={{ marginTop: 6 }}>
+          This is the amount you committed, and it does not change. New
+          commitments are now {state.config.stakeAmountUsdt} USDT; yours is
+          settled at {stake.amountUsdt} USDT exactly as you made it.
+        </p>
+      ) : null}
 
       {stake.targetMet ? (
         <Notice tone="good">

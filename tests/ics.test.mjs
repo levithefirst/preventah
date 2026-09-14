@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import {
   DEFAULT_REMINDER_HOUR,
@@ -186,4 +187,74 @@ test('folding counts octets, so a multi-byte character is never split', () => {
   assert.equal(folded.replace(/\r\n /g, ''), line);
   // A split multi-byte character would show up as a replacement character.
   assert.ok(!folded.includes('�'));
+});
+
+// --- the route ------------------------------------------------------------
+
+/*
+  The reminder endpoint must stay unauthenticated.
+
+  It used to require a session, which broke it at exactly the moment it
+  mattered: a WebView that cannot render text/calendar hands the URL to a
+  download manager or an external browser, neither of which carries the Mini
+  App's cookie, so the user got "Not signed in." instead of a reminder.
+
+  There is nothing in the response worth authenticating: a time of day, a
+  generic title and a recurrence rule.
+*/
+test('the reminder route requires no session and reads no user data', () => {
+  const route = readFileSync('src/app/api/reminder.ics/route.ts', 'utf8');
+
+  assert.ok(!route.includes('requireUser'), 'must not require a session');
+  assert.ok(!route.includes('getActiveStake'), 'must not read the stake');
+  assert.ok(!route.includes('@/lib/repo'), 'must not touch the database');
+  assert.ok(!route.includes('401'), 'must not have an unauthorised path');
+});
+
+/*
+  The event UID must carry no correlator.
+
+  It used to be stamped with the user's stake id, which put a unique handle
+  into a file that syncs to a user's other devices and is sometimes visible
+  to a household. It is derived from the requested time alone now, which is
+  still stable enough that re-importing updates the entry rather than
+  stacking a second daily alarm.
+*/
+test('the UID is derived from the reminder time, not from the user', () => {
+  const route = readFileSync('src/app/api/reminder.ics/route.ts', 'utf8');
+  assert.ok(route.includes('uidSuffix: uidFor(hour, minute)'));
+  assert.ok(!/uidSuffix:\s*stake/.test(route));
+  assert.ok(!route.includes('stake.id'));
+});
+
+/*
+  Content-Disposition must not be `attachment`.
+
+  `attachment` forces the WebView download path, which on Android does
+  nothing at all unless the host app installed a DownloadListener. That is
+  what made the old button silently swallow the tap.
+*/
+test('the response is served inline, not as a forced download', () => {
+  const route = readFileSync('src/app/api/reminder.ics/route.ts', 'utf8');
+
+  assert.ok(route.includes("'text/calendar; charset=utf-8'"));
+  assert.ok(route.includes('inline; filename='));
+  assert.ok(
+    !/content-disposition[^\n]*attachment/i.test(route),
+    'attachment routes into the WebView download path',
+  );
+});
+
+/*
+  And the button must not reintroduce the download attribute, which is the
+  other half of the same failure.
+*/
+test('the reminder button does not depend on a download', () => {
+  const card = readFileSync('src/components/ReminderCard.tsx', 'utf8');
+
+  assert.ok(!/\bdownload\b(?!\s)/.test(card.replace(/\/\*[\s\S]*?\*\//g, '')),
+    'the download attribute is swallowed by Android WebViews');
+  assert.ok(card.includes('webcal://'), 'the primary action uses the webcal scheme');
+  // No success state: the page cannot observe whether the OS accepted it.
+  assert.ok(!/Added to calendar/i.test(card));
 });

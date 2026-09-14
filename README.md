@@ -38,6 +38,10 @@ commitment device rather than anything resembling a wager. Nothing about the
 outcome is random: the reward is a fixed 5% (`REWARD_BPS=500`), so a
 successful 0.10 USDT commitment returns exactly 0.105 USDT.
 
+The amount applies to **new** commitments only. A commitment already running
+was priced when it was made and is settled against the amount recorded on its
+own row; changing the default never reprices it.
+
 ## Custody, in plain terms
 
 Be clear-eyed about this before staking anything:
@@ -46,8 +50,8 @@ Be clear-eyed about this before staking anything:
   field for one, and no code path that would accept one. Signing and payment
   happen entirely inside Nimiq Pay's own wallet UI.
 - **The escrow wallet is project-controlled and custodial.** While a
-  commitment is running, your 0.10 USDT sits in a wallet the project holds the
-  key to. You are trusting the operator to return it.
+  commitment is running, your USDT sits in a wallet the project holds the key
+  to. You are trusting the operator to return it.
 - **That key lives only in Vercel's environment**, is read by one server-side
   function, and is never logged, returned in a response, or shipped to the
   browser.
@@ -75,7 +79,7 @@ confirmed from the user's Nimiq Pay wallet.
 | Chain | Polygon PoS, chain id `137` (`0x89`) |
 | Token | USDT (PoS), 6 decimals |
 | Contract | `0xc2132D05D31c914a87C6611C10748AEb04B58e8F` |
-| Commitment | 0.10 USDT (`NEXT_PUBLIC_STAKE_AMOUNT_USDT`) |
+| Commitment | 0.10 USDT for a new commitment, compiled in as `STAKE_AMOUNT_USDT` |
 | Reward | 5%, fixed (`REWARD_BPS=500`) |
 | Window | check in on 5 days out of 7 |
 
@@ -120,6 +124,35 @@ What the app deliberately does **not** do:
 Sources are authoritative public-health references (WHO, NHS, CDC,
 MedlinePlus/NIH), given so a reader can go further, not as a citation for a
 numeric claim, because the app makes no numeric claims.
+
+---
+
+## The Mini App icon
+
+The tile Preventah shows in **Nimiq Pay's Mini Apps directory is not served
+from this repository.** It comes from the `icon:` field of `submission.yaml`
+in [`nimiq/miniappscompetition-submissions`](https://github.com/nimiq/miniappscompetition-submissions),
+alongside `thumbnail:` and `screenshots:`, and is hosted by Nimiq. Nothing in
+this codebase can change it: `@nimiq/mini-app-sdk` exposes only `init()`,
+`getHostLanguage()`, `requestDeviceIdentifier()` and the wallet provider, with
+no icon, manifest or registration API of any kind.
+
+`public/icons/preventah-icon-1024.png` is generated for that submission.
+
+What this repository *does* control is every other icon surface, and those
+were the reason a generic globe was appearing: until recently the only icons
+here were SVG, which native icon loaders generally cannot decode.
+
+| Asset | Format | Used by |
+| --- | --- | --- |
+| `/favicon.svg` | SVG | Browser tabs. Drawn for 16-32px: no mint grid, heavier P |
+| `/icons/icon-192.png`, `/icons/icon-512.png` | PNG | Web app manifest, launchers, host scrapers |
+| `/icons/icon-maskable-512.png` | PNG | Maskable purpose; mark pulled into the safe circle |
+| `/icons/apple-touch-icon.png` | PNG | iOS home screen, which does not accept SVG |
+| `/icons/preventah-icon-1024.png` | PNG | The Nimiq Mini Apps submission |
+
+All of them are rasterised from `public/brand/preventah-app-icon.svg`, which
+is the single source of truth for the icon composition.
 
 ---
 
@@ -267,7 +300,6 @@ Set these in the Vercel dashboard for a deployment. See `.env.example`.
 | `CRON_SECRET` | server | Guards `/api/cron/payout` |
 | `SESSION_SECRET` | server | Signs wallet-auth session cookies |
 | `POLYGON_RPC_URL` | server | Reading receipts, broadcasting payouts |
-| `NEXT_PUBLIC_STAKE_AMOUNT_USDT` | client | Stake size for new commitments, defaults to 0.10 |
 | `REWARD_BPS` | server | Reward in basis points, defaults to 500 (5%) |
 
 `ESCROW_PRIVATE_KEY` must never be prefixed with `NEXT_PUBLIC_` and must never
