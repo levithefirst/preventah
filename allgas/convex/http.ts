@@ -7,8 +7,19 @@ import { INDEX_PATH, SITE_ASSETS } from './siteAssets';
  *
  * `*.convex.site` is the HTTP-router domain, so putting the SPA behind
  * the same router is what "hosted on Convex" means here: one deploy, one
- * origin, and no second provider between a judge and the app. Unknown
- * paths fall back to index.html so client-side state survives a reload.
+ * origin, and no second provider between a judge and the app.
+ *
+ * Routing is exact, and deliberately so. A `pathPrefix: '/'` catch-all
+ * looks like the obvious SPA fallback and does not work: it left the
+ * deployment answering "No content found" at the root, which is the
+ * edge's message rather than the router's own 404, so the request never
+ * reached this module at all. Every path the build emits is registered
+ * instead, which is a shorter list than it sounds: an index, and one
+ * fingerprinted prefix.
+ *
+ * The app keeps its state in React and never pushes history entries, so
+ * there are no client-side routes to fall back for. If that changes, the
+ * deep links have to be registered here too.
  */
 const http = httpRouter();
 
@@ -22,11 +33,14 @@ function decode(base64: string): ArrayBuffer {
 const serve = httpAction(async (_ctx, request) => {
   const { pathname } = new URL(request.url);
   const key = pathname === '/' ? INDEX_PATH : pathname;
-  const asset = SITE_ASSETS[key] ?? SITE_ASSETS[INDEX_PATH];
+  const asset = SITE_ASSETS[key];
 
   if (!asset) {
-    return new Response('Site not built. Run `npm run build` before deploying.', {
-      status: 503,
+    // A miss under /assets/ is a stale fingerprint, not a deep link.
+    // Returning index.html for it would hand the browser HTML where it
+    // asked for a script, which fails later and harder than a 404.
+    return new Response(`Not found: ${pathname}`, {
+      status: 404,
       headers: { 'Content-Type': 'text/plain; charset=utf-8' },
     });
   }
@@ -44,7 +58,18 @@ const serve = httpAction(async (_ctx, request) => {
   });
 });
 
+// The root, which serves the index.
 http.route({ path: '/', method: 'GET', handler: serve });
-http.route({ pathPrefix: '/', method: 'GET', handler: serve });
+
+// Everything Vite fingerprints. A prefix here is safe: it is not the root.
+http.route({ pathPrefix: '/assets/', method: 'GET', handler: serve });
+
+// Every other file the build actually emitted, at its own exact path.
+// Today that is /index.html alone; a favicon or a manifest added later is
+// picked up without touching this file.
+for (const path of Object.keys(SITE_ASSETS)) {
+  if (path === '/' || path.startsWith('/assets/')) continue;
+  http.route({ path, method: 'GET', handler: serve });
+}
 
 export default http;
