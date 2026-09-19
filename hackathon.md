@@ -3,16 +3,16 @@
 - **Project:** Preventah All Gas
 - **Event:** Convex All Gas Hackathon
 - **What it does:** Gives a household three prevention actions a day at free, cheap and premium spend tiers, and shows every member's check-ins on a live board.
-- **Live app:** not deployed
+- **Live app:** https://qualified-hummingbird-614.convex.site
 - **Repo:** https://github.com/levithefirst/preventah
 - **Frontend:** Convex static hosting
-- **Convex deployment:** not deployed
+- **Convex deployment:** https://qualified-hummingbird-614.convex.cloud
 - **Components:** none
 - **Convex features:** schema, tables, indexes, queries, mutations, actions, HTTP actions, crons, realtime queries
 - **Auth:** none
 - **AI models:** none
 - **Started:** 2026-09-19T17:58:00Z
-- **Last updated:** 2026-09-19T18:11:00Z
+- **Last updated:** 2026-09-19T19:12:00Z
 
 ## Log
 
@@ -89,3 +89,10 @@ from here. `convex/_generated/` was produced locally from the Convex CLI's own
 codegen templates so the project typechecks and builds offline; `npx convex
 dev` regenerates it. The frontend build is verified (`vite build`, 98 modules)
 and `tsc --noEmit` is clean across `convex/` and `src/`.
+
+### 2026-09-19 - 8961f9c
+Live in production on Convex, which supersedes the "not yet deployed" note
+above: that entry still describes the build environment, not the project. The
+GitHub Actions workflow deployed backend and embedded site together, and the
+app now answers on its `.convex.site` origin with the Convex deployment behind
+it (`.github/workflows/allgas-deploy.yml`, `convex/http.ts`).
