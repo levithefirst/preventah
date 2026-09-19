@@ -1,0 +1,28 @@
+name: Deploy All Gas
+
+on:
+  push:
+    branches: [all-gas]
+    paths:
+      - "allgas/**"
+      - ".github/workflows/allgas-deploy.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: allgas
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: allgas/package-lock.json
+      - run: npm ci
+      - name: Deploy backend and embed site to convex.site
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: npx convex deploy --yes --cmd "npm run build" --cmd-url-env-var-name VITE_CONVEX_URL
