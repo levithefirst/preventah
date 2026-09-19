@@ -1,0 +1,104 @@
+/* Deliberately plain. The loop is the point; this is enough to use it on a phone. */
+:root {
+  --ink: #16181d;
+  --muted: #5d6470;
+  --line: #d8dce3;
+  --bg: #f6f7f9;
+  --card: #ffffff;
+  --on: #0b6b3a;
+  --onbg: #e7f5ed;
+  --bad: #9b1c1c;
+  --warnbg: #fdf3e3;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+
+.wrap { max-width: 720px; margin: 0 auto; padding: 16px; }
+h1 { font-size: 22px; margin: 0 0 4px; }
+h2 { font-size: 17px; margin: 0 0 6px; }
+p { margin: 6px 0; }
+
+.top { margin-bottom: 12px; }
+.sub, .muted { color: var(--muted); font-size: 14px; }
+
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.tab {
+  flex: 1 1 auto; padding: 8px 10px; border: 1px solid var(--line);
+  background: var(--card); border-radius: 8px; cursor: pointer; font: inherit;
+  text-transform: capitalize;
+}
+.tab.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+.card {
+  background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+  padding: 14px; margin-bottom: 12px;
+}
+.card.done { border-color: var(--on); background: var(--onbg); }
+.card.picked { border-color: var(--ink); border-width: 2px; }
+
+.kind { text-transform: uppercase; letter-spacing: .08em; font-size: 11px; color: var(--muted); margin: 0; }
+
+.tiers { display: grid; gap: 8px; margin: 10px 0; }
+@media (min-width: 560px) { .tiers { grid-template-columns: repeat(3, 1fr); } }
+.tier {
+  display: flex; flex-direction: column; gap: 4px; text-align: left;
+  padding: 10px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--card); cursor: pointer; font: inherit;
+}
+.tier.on { border-color: var(--on); background: var(--onbg); }
+.tierLabel { font-weight: 700; font-size: 13px; }
+.tierTitle { font-size: 14px; }
+.tierCost { font-size: 12px; color: var(--muted); }
+
+.row { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.score { text-align: right; white-space: nowrap; }
+.big { display: block; font-size: 22px; font-weight: 700; }
+.pick { font-size: 13px; color: var(--muted); white-space: nowrap; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.chip {
+  padding: 5px 9px; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--card); cursor: pointer; font: inherit; font-size: 13px;
+}
+.chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+label { display: block; margin: 8px 0; font-size: 14px; color: var(--muted); }
+input {
+  display: block; width: 100%; margin-top: 4px; padding: 9px;
+  border: 1px solid var(--line); border-radius: 8px; font: inherit; color: var(--ink);
+}
+
+.primary {
+  margin-top: 10px; padding: 10px 14px; border: 0; border-radius: 8px;
+  background: var(--ink); color: #fff; font: inherit; cursor: pointer;
+}
+.primary:disabled { opacity: .5; cursor: default; }
+
+.link {
+  background: none; border: 0; padding: 4px 0; color: var(--ink);
+  text-decoration: underline; cursor: pointer; font: inherit; font-size: 14px;
+}
+
+.ok { color: var(--on); font-size: 14px; }
+.bad { color: var(--bad); font-size: 14px; }
+.warn { background: var(--warnbg); padding: 8px; border-radius: 6px; font-size: 14px; }
+.note { background: var(--onbg); padding: 10px; border-radius: 8px; font-size: 14px; }
+
+.detail { border-top: 1px solid var(--line); margin-top: 10px; padding-top: 10px; }
+.detail ol { padding-left: 20px; margin: 6px 0; }
+
+.consent { padding-left: 18px; }
+.consent li { margin-bottom: 8px; }
+
+.source { border-top: 1px solid var(--line); padding-top: 8px; margin-top: 8px; }
+.source a { color: var(--ink); }
+
+.foot { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 12px; }
+.foot p { color: var(--muted); font-size: 13px; }
