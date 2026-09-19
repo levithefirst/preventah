@@ -1,7 +1,7 @@
-import type { PlanTag } from './condition-types';
-import { conditionName, getCondition } from './condition-index';
+import type { PlanTag } from './conditionTypes';
+import { conditionName, getCondition } from './conditionIndex';
 import type { ConditionId } from './conditions';
-import { PLAN_CONTENT, type PlanContent, type PlanItemType } from './plan-content';
+import { PLAN_CONTENT, type PlanContent, type PlanItemType } from './planContent';
 
 /**
  * Resolves a daily plan from a set of selected conditions.
@@ -16,7 +16,7 @@ import { PLAN_CONTENT, type PlanContent, type PlanItemType } from './plan-conten
  *    unknown condition id, or a nonsense day index.
  *
  * The bridge from conditions to guidance is the tag vocabulary in
- * condition-types.ts. A condition carries tags, a plan item carries tags,
+ * conditionTypes.ts. A condition carries tags, a plan item carries tags,
  * and an item is shown when the two intersect. Nothing in the catalog
  * names a plan item and nothing in the content names a condition, which is
  * why the catalog can grow without the content having to.

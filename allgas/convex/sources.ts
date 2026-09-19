@@ -1,7 +1,7 @@
 import { action, internalMutation, internalQuery, query } from './_generated/server';
 import { v } from 'convex/values';
 import { internal } from './_generated/api';
-import { getCondition, conditionName } from './lib/condition-index';
+import { getCondition, conditionName } from './lib/conditionIndex';
 
 /**
  * Firecrawl source cards.

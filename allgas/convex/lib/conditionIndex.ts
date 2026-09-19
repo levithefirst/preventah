@@ -4,8 +4,8 @@ import {
   type ConditionCategory,
   type ConditionEntry,
   type PlanTag,
-} from './condition-types';
-import { CONDITION_CATALOG } from './condition-catalog';
+} from './conditionTypes';
+import { CONDITION_CATALOG } from './conditionCatalog';
 
 /**
  * Lookup and search over the condition catalog.

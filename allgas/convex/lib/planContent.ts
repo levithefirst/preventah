@@ -1,4 +1,4 @@
-import type { PlanTag } from './condition-types';
+import type { PlanTag } from './conditionTypes';
 
 /**
  * The prevention guidance library.

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { getDailyPlan } from '../convex/lib/plans.ts';
 import { withTiers, TIERS } from '../convex/lib/tiers.ts';
 import { sanitizeConditionIds, MAX_SELECTIONS } from '../convex/lib/conditions.ts';
-import { CONDITION_COUNT, searchConditions } from '../convex/lib/condition-index.ts';
+import { CONDITION_COUNT, searchConditions } from '../convex/lib/conditionIndex.ts';
 import { dayKeyOf, previousDayKey, localHour } from '../convex/lib/day.ts';
 import { normalizeJoinCode } from '../convex/lib/joincode.ts';
 

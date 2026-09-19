@@ -1,11 +1,11 @@
-import { CONDITION_CATALOG } from './condition-catalog';
-import { conditionName, isConditionId } from './condition-index';
+import { CONDITION_CATALOG } from './conditionCatalog';
+import { conditionName, isConditionId } from './conditionIndex';
 
 /**
  * The trust boundary for condition selections.
  *
  * Everything a user can tell Preventah about their family health comes
- * through here, and every value is an id from src/lib/condition-catalog.ts.
+ * through here, and every value is an id from ./conditionCatalog.ts.
  * There is no free-text input anywhere in the app, and the database backs
  * that up with a foreign key, so this module is the first of two gates
  * rather than the only one.

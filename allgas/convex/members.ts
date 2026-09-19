@@ -4,7 +4,7 @@ import { sanitizeConditionIds, MAX_SELECTIONS } from './lib/conditions';
 import { getDailyPlan } from './lib/plans';
 import { withTiers } from './lib/tiers';
 import { dayIndexOf, dayKeyOf, isValidTimezone } from './lib/day';
-import { conditionName, getCondition } from './lib/condition-index';
+import { conditionName, getCondition } from './lib/conditionIndex';
 
 /**
  * A member's own state: consent, selections, and what today asks of them.

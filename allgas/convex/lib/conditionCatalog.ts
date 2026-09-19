@@ -1,4 +1,4 @@
-import type { ConditionEntry } from './condition-types';
+import type { ConditionEntry } from './conditionTypes';
 
 /**
  * The family-health-condition catalog.

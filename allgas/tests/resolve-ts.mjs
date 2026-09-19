@@ -1,7 +1,7 @@
 /**
  * Resolves the extensionless relative imports the convex/ modules use.
  *
- * Convex's own bundler resolves `./condition-types` to the .ts file. Plain
+ * Convex's own bundler resolves `./conditionTypes` to the .ts file. Plain
  * Node ESM does not, so the tests register this hook and then run the
  * real modules unmodified, rather than keeping a test-only copy of them.
  */

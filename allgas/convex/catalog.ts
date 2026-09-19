@@ -1,6 +1,6 @@
 import { query } from './_generated/server';
 import { v } from 'convex/values';
-import { searchConditions, CATEGORY_SUMMARIES, CONDITION_COUNT } from './lib/condition-index';
+import { searchConditions, CATEGORY_SUMMARIES, CONDITION_COUNT } from './lib/conditionIndex';
 
 /**
  * The condition picker's data.

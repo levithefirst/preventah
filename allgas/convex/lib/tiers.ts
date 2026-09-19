@@ -1,5 +1,5 @@
 import type { PlanItem, PlanItemType } from './plans';
-import type { PlanTag } from './condition-types';
+import type { PlanTag } from './conditionTypes';
 
 /**
  * Spend tiers for a daily action.
