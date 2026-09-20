@@ -20,6 +20,7 @@ import type * as households from "../households.js";
 import type * as http from "../http.js";
 import type * as mail from "../mail.js";
 import type * as members from "../members.js";
+import type * as plansGenerate from "../plansGenerate.js";
 import type * as siteAssets from "../siteAssets.js";
 import type * as sources from "../sources.js";
 import type * as lib_conditionCatalog from "../lib/conditionCatalog.js";
@@ -30,6 +31,7 @@ import type * as lib_day from "../lib/day.js";
 import type * as lib_joincode from "../lib/joincode.js";
 import type * as lib_planContent from "../lib/planContent.js";
 import type * as lib_plans from "../lib/plans.js";
+import type * as lib_rewrite from "../lib/rewrite.js";
 import type * as lib_tiers from "../lib/tiers.js";
 
 /**
@@ -48,6 +50,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   mail: typeof mail;
   members: typeof members;
+  plansGenerate: typeof plansGenerate;
   siteAssets: typeof siteAssets;
   sources: typeof sources;
   "lib/conditionCatalog": typeof lib_conditionCatalog;
@@ -58,6 +61,7 @@ declare const fullApi: ApiFromModules<{
   "lib/joincode": typeof lib_joincode;
   "lib/planContent": typeof lib_planContent;
   "lib/plans": typeof lib_plans;
+  "lib/rewrite": typeof lib_rewrite;
   "lib/tiers": typeof lib_tiers;
 }>;
 export declare const api: FilterApi<

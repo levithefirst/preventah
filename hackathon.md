@@ -8,11 +8,11 @@
 - **Frontend:** Convex static hosting
 - **Convex deployment:** https://qualified-hummingbird-614.convex.cloud
 - **Components:** none
-- **Convex features:** schema, tables, indexes, queries, mutations, actions, HTTP actions, crons, realtime queries
+- **Convex features:** schema, tables, indexes, queries, mutations, actions, internal functions, HTTP actions, crons, realtime queries
 - **Auth:** none
-- **AI models:** none
+- **AI models:** gpt-5-nano, falling back to gpt-4.1-nano then gpt-4o-mini
 - **Started:** 2026-09-19T17:58:00Z
-- **Last updated:** 2026-09-19T19:12:00Z
+- **Last updated:** 2026-09-20T17:54:00Z
 
 ## Log
 
@@ -96,3 +96,32 @@ above: that entry still describes the build environment, not the project. The
 GitHub Actions workflow deployed backend and embedded site together, and the
 app now answers on its `.convex.site` origin with the Convex deployment behind
 it (`.github/workflows/allgas-deploy.yml`, `convex/http.ts`).
+
+### 2026-09-20 - working tree
+Added a wording layer over the catalog plan, not a replacement for it. One
+OpenAI call per member per calendar day rewrites three titles, three one-line
+hows and nine tier titles; ids, types, how-to lists, safety notes, costs and
+every source stay exactly as the catalog has them (`convex/plansGenerate.ts`,
+`convex/lib/openai.ts`, `convex/lib/rewrite.ts`). The day's row in the new
+`dailyPlans` table is claimed in a transaction before the call goes out, so
+the row is both the cache and the spend guard: tab changes, reloads and the
+"Refresh wording" button all hit the table, and a second call for the same day
+is impossible rather than merely unlikely.
+
+Validation decides what is allowed through. A response is rejected whole if it
+renames an id, reorders a tier, runs long, adds a URL the catalog did not
+supply, or introduces a drug, dose, lab, supplement-as-treatment, diagnosis or
+prediction. "Introduces" is defined against the catalog copy for that action,
+so echoing a clinical word the catalog already used is fine and inventing one
+is not. Any rejection, missing key, 401, 429, timeout or non-JSON body stores
+`rewrite: "catalog"` and the catalog wording renders unchanged. There are no
+retries; the model chain is walked only on a free 404 or parameter rejection.
+
+Tests cover the parts that matter without a deployment (`allgas/tests/`): the
+money rules against a stubbed fetch (one call per billable failure, the chain
+advancing exactly once on a 404, the token ceiling), the safety rules
+(invented drugs and doses rejected end to end), and a regression that walks
+120 plan-days asserting the catalog's own wording always validates, so the
+guard can never fail closed and quietly disable the layer. 40 tests pass, tsc
+is clean and the build is green. The deployment's stored `model` field records
+which model actually answered.

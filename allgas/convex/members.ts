@@ -5,6 +5,7 @@ import { getDailyPlan } from './lib/plans';
 import { withTiers } from './lib/tiers';
 import { dayIndexOf, dayKeyOf, isValidTimezone } from './lib/day';
 import { conditionName, getCondition } from './lib/conditionIndex';
+import { applyRewrite } from './lib/rewrite';
 
 /**
  * A member's own state: consent, selections, and what today asks of them.
@@ -118,6 +119,11 @@ const action = v.object({
  * The plan itself is resolved synchronously from curated content. No LLM
  * call sits between opening the app and seeing what to do today, which is
  * why this is a query and not an action.
+ *
+ * Rewritten wording, when today's row has any, is overlaid on top of that
+ * catalog plan rather than replacing it. The read path therefore never
+ * depends on OpenAI having succeeded, or on it having been called at all:
+ * `rewrite: null` simply means today has not been generated yet.
  */
 export const today = query({
   args: { memberId: v.id('members') },
@@ -137,6 +143,9 @@ export const today = query({
       isBaseline: v.boolean(),
       actions: v.array(action),
       doneCount: v.number(),
+      /** null until today's row exists. Non-null means never call again. */
+      rewrite: v.union(v.string(), v.null()),
+      model: v.union(v.string(), v.null()),
     }),
   ),
   handler: async (ctx, args) => {
@@ -153,10 +162,21 @@ export const today = query({
     const dayIndex = dayIndexOf() - member.startDayIndex;
     const plan = getDailyPlan(member.conditionIds, dayIndex);
 
-    const actions = [plan.diet, plan.exercise, plan.habit].map((item) => {
-      const tiered = withTiers(item);
-      return { ...tiered, doneTier: doneByAction.get(tiered.id) ?? null };
-    });
+    const row = await ctx.db
+      .query('dailyPlans')
+      .withIndex('by_member_day', (q) => q.eq('memberId', args.memberId).eq('dayKey', dayKey))
+      .unique();
+
+    const catalog = [plan.diet, plan.exercise, plan.habit].map(withTiers);
+    const resolved =
+      row && row.rewrite === 'openai' && row.actions.length > 0
+        ? applyRewrite(catalog, row.actions)
+        : catalog;
+
+    const actions = resolved.map((item) => ({
+      ...item,
+      doneTier: doneByAction.get(item.id) ?? null,
+    }));
 
     return {
       memberId: member._id,
@@ -176,6 +196,8 @@ export const today = query({
       isBaseline: plan.isBaseline,
       actions,
       doneCount: done.length,
+      rewrite: row ? row.rewrite : null,
+      model: row ? row.model : null,
     };
   },
 });

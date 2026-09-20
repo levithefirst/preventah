@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useMutation } from 'convex/react';
+import { useEffect, useRef, useState } from 'react';
+import { useAction, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import type { Action, Me } from '../types';
 import Sources from './Sources';
@@ -14,6 +14,7 @@ import Sources from './Sources';
 export default function Today({ me }: { me: Me }) {
   return (
     <section>
+      <Wording me={me} />
       {me.isBaseline && (
         <p className="note">
           This is the general plan. Pick the conditions that run in your family to tune it.
@@ -24,6 +25,53 @@ export default function Today({ me }: { me: Me }) {
       ))}
       {me.conditions.length > 0 && <Sources conditions={me.conditions} />}
     </section>
+  );
+}
+
+/**
+ * The wording line, and the one call that produces it.
+ *
+ * `me.rewrite` is null only until today's row exists, so this fires at
+ * most once per member per day; after that the row short-circuits the
+ * action before any network call, which is what makes the refresh button
+ * free rather than another charge. The ref guards the second render of
+ * StrictMode, and the server guards everything else.
+ */
+function Wording({ me }: { me: Me }) {
+  const generate = useAction(api.plansGenerate.generate);
+  const [busy, setBusy] = useState(false);
+  const asked = useRef<string | null>(null);
+
+  const needsGenerating = me.rewrite === null;
+
+  useEffect(() => {
+    if (!needsGenerating) return;
+    const key = `${me.memberId}:${me.dayKey}`;
+    if (asked.current === key) return;
+    asked.current = key;
+    setBusy(true);
+    void generate({ memberId: me.memberId }).finally(() => setBusy(false));
+  }, [needsGenerating, me.memberId, me.dayKey, generate]);
+
+  const label =
+    me.rewrite === 'openai'
+      ? `Wording tightened \u00b7 sources unchanged${me.model ? ` \u00b7 ${me.model}` : ''}`
+      : 'Catalog wording';
+
+  return (
+    <p className="muted wording">
+      {busy && me.rewrite === null ? 'Tightening wording...' : label}{' '}
+      <button
+        className="link"
+        disabled={busy}
+        onClick={() => {
+          setBusy(true);
+          void generate({ memberId: me.memberId }).finally(() => setBusy(false));
+        }}
+      >
+        Refresh wording
+      </button>
+    </p>
   );
 }
 

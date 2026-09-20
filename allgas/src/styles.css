@@ -102,3 +102,5 @@ input {
 
 .foot { margin-top: 20px; border-top: 1px solid var(--line); padding-top: 12px; }
 .foot p { color: var(--muted); font-size: 13px; }
+
+.wording { margin: 0 0 10px; }

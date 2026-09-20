@@ -73,6 +73,34 @@ export default defineSchema({
     .index('by_condition', ['conditionId'])
     .index('by_condition_url', ['conditionId', 'url']),
 
+  /**
+   * One row per member per day of rewritten wording.
+   *
+   * The row is claimed before the OpenAI call and patched after, so it is
+   * both the cache and the spend guard: a row existing at all means today
+   * is already paid for, whether the call succeeded or fell back.
+   */
+  dailyPlans: defineTable({
+    memberId: v.id('members'),
+    dayKey: v.string(),
+    /** 'openai' when validated wording is stored, 'catalog' when it fell back. */
+    rewrite: v.union(v.literal('openai'), v.literal('catalog')),
+    /** The model id actually called, or null when none was. */
+    model: v.union(v.string(), v.null()),
+    /** Empty when rewrite is 'catalog'. Overlaid on the catalog plan when not. */
+    actions: v.array(
+      v.object({
+        id: v.string(),
+        title: v.string(),
+        oneLiner: v.string(),
+        tiers: v.array(v.object({ tier: v.string(), title: v.string() })),
+      }),
+    ),
+    /** Why it fell back, for the dashboard. Never a key or a response body. */
+    detail: v.union(v.string(), v.null()),
+    updatedAt: v.number(),
+  }).index('by_member_day', ['memberId', 'dayKey']),
+
   /** One row per intended send. Written before the API call, so it dedupes. */
   mailLog: defineTable({
     memberId: v.id('members'),
