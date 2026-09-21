@@ -55,10 +55,19 @@ export const metadata: Metadata = {
       { url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
     ],
   },
+  /*
+    Kept in step with the page it previews.
+
+    The card is the first thing most people see, and it is what the
+    competition listing scrapes, so it repeats the headline rather than
+    paraphrasing it. When the h1 on SiteHome changes, this changes with it:
+    a card promising one thing and a page delivering another reads as a
+    stale link, which is the opposite of the trust this product needs.
+  */
   openGraph: {
-    title: 'Preventah — Stay ahead of family history',
+    title: 'Preventah — Something runs in your family',
     description:
-      'Know what runs in your family. Follow a clear prevention plan. Put real USDT behind the habit of showing up.',
+      'Pick what runs in your family from 117 catalog conditions. Get three specific things to do today, and commit USDT in Nimiq Pay so you actually do them.',
     siteName: 'Preventah',
     type: 'website',
   },
