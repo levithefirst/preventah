@@ -1,11 +1,15 @@
 import {
+  CATEGORY_COUNT_PUBLIC,
   CONDITION_COUNT_PUBLIC,
+  CommitmentTerms,
   FAQ_ITEMS,
   Faq,
   HowItWorks,
   PlanPreview,
   ProgressPreview,
+  ProofPills,
   SafetyList,
+  STAKE_LABEL,
   WhatItIs,
 } from './sections';
 import { CtaRow, Section, SiteLayout } from './shared';
@@ -30,12 +34,18 @@ export function SiteHome() {
       <div className="pv-hero">
         <div>
           <span className="pv-eyebrow">A Nimiq Pay Mini App</span>
-          <h1>Stay ahead of family history.</h1>
+          <h1>
+            Something runs in your family. Get today&rsquo;s diet, walk and
+            habit.
+          </h1>
           <p className="pv-lede" style={{ marginTop: 16 }}>
-            Know what runs in your family. Follow a clear prevention plan. Put
-            real USDT behind the habit of showing up.
+            Pick what runs in your family from {CONDITION_COUNT_PUBLIC} catalog
+            conditions. Preventah turns that into three specific things to do
+            today, then you commit {STAKE_LABEL} in Nimiq Pay so you actually
+            do them.
           </p>
           <CtaRow secondary={{ href: '#how-it-works', label: 'How it works' }} />
+          <ProofPills />
           <p className="faint" style={{ marginTop: 16 }}>
             Preventah does not diagnose, treat, or prescribe. It does not
             replace a clinician.
@@ -50,15 +60,22 @@ export function SiteHome() {
             Family history in. A daily plan out.
           </h2>
           <p className="muted" style={{ marginTop: 10 }}>
-            Pick from {CONDITION_COUNT_PUBLIC} conditions across 13 categories.
-            Preventah turns what you know into one diet change, one bit of
-            movement, and one habit each day.
+            Pick from {CONDITION_COUNT_PUBLIC} conditions across{' '}
+            {CATEGORY_COUNT_PUBLIC} categories. Preventah turns what you know
+            into one diet change, one bit of movement, and one habit each day.
           </p>
           <p className="faint" style={{ marginTop: 12 }}>
             No symptom checker. No risk score. No free-text box anywhere.
           </p>
         </Window>
       </div>
+
+      {/* --- The problem --- */}
+      <Section
+        eyebrow="The problem"
+        title="You already know it runs in the family. Knowing is not a routine."
+        lede="People live with “Dad had it” and “it skipped a generation”, and then cook the same dinner. General fitness apps do not start from family history. A clinician is not in your pocket at 8pm on a Tuesday. Preventah is the small daily layer in between."
+      />
 
       {/* --- What it is --- */}
       <Section
@@ -143,7 +160,13 @@ export function SiteHome() {
       >
         <div className="pv-grid">
           <Window bar="Commitment" barTone="ink" offset size="roomy">
-            <ul className="pv-plain-list">
+            {/*
+              The terms first, as terms. Hiding what it costs until someone
+              has installed a wallet is the behaviour this product exists to
+              argue against, so the number goes on the page.
+            */}
+            <CommitmentTerms />
+            <ul className="pv-plain-list" style={{ marginTop: 20 }}>
               <li>
                 <strong>Your commitment is never kept.</strong> Preventah does
                 not take deposits. The reward is the only thing at stake, which
@@ -152,8 +175,10 @@ export function SiteHome() {
               </li>
               <li>
                 <strong>Nothing about the outcome is random.</strong> The
-                reward is a fixed percentage, set in the code, the same for
-                everyone.
+                reward is a fixed percentage of your commitment, the same for
+                everyone, and it is settled by a rule rather than by chance.
+                There is no draw, no multiplier and no way to lose more by
+                trying.
               </li>
               <li>
                 <strong>You approve every transfer in Nimiq Pay.</strong>{' '}

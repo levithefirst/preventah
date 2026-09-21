@@ -2,19 +2,115 @@ import type { ReactNode } from 'react';
 import Window from '../ui/Window';
 import PlanGlyph from '../ui/PlanGlyph';
 import type { PlanItemType } from '@/lib/plan-content';
+import { STAKE_AMOUNT_USDT, TARGET_DAYS, WINDOW_DAYS } from '@/lib/config';
 
 /**
  * Reusable public-site sections.
  *
- * Every claim here is restated from what the code actually does. Where a
- * number would need to be read out of config to be accurate (the commitment
- * amount, the reward rate), the copy describes the rule instead of quoting a
- * figure, so the site cannot drift out of step with the product.
+ * Every claim here is restated from what the code actually does. A figure
+ * appears on this page only when it can be read from somewhere the browser
+ * is already allowed to see; otherwise the copy describes the rule. That is
+ * what stops the marketing page quietly disagreeing with the product.
+ *
+ * Which side of that line each number falls on:
+ *
+ *  - The commitment amount, the target and the window are compiled into
+ *    config.ts, which is client-safe by construction, so they are imported
+ *    and rendered rather than typed out.
+ *  - The reward rate is NOT. REWARD_BPS is read from the environment inside
+ *    server-env.ts, which is guarded by `server-only`, so the browser has no
+ *    honest way to know it. Printing "5%" here would be a literal that keeps
+ *    claiming 5% after somebody changes the variable. So the reward is
+ *    always described as fixed, never quoted.
+ *  - The condition count stays a literal, because importing the catalog to
+ *    render one number would ship all 117 entries to every visitor.
  */
 
-/** Kept in words rather than imported: importing the catalog to render one
- *  number on a marketing page would ship 117 conditions to every visitor. */
+/** See the note above: a literal on purpose, to keep the catalog off this page. */
 export const CONDITION_COUNT_PUBLIC = 117;
+
+/** Distinct `category` values in the catalog. Also a deliberate literal. */
+export const CATEGORY_COUNT_PUBLIC = 13;
+
+/** The most conditions one person can select. Mirrors MAX_SELECTIONS. */
+export const MAX_SELECTIONS_PUBLIC = 15;
+
+/**
+ * The commitment, formatted the way a person reads it.
+ *
+ * Two decimals always, so it reads as money rather than as a bare number.
+ */
+export const STAKE_LABEL = `${STAKE_AMOUNT_USDT.toFixed(2)} USDT`;
+
+/**
+ * The four facts worth having above the fold.
+ *
+ * A list rather than a row of divs, because that is what it is: an
+ * unordered set of claims. Screen readers announce the count, which is the
+ * one thing a sighted visitor gets free from the layout.
+ *
+ * Nothing here is a testimonial, a user count or a rating. The product is
+ * new and has none of those, and inventing them is the fastest way to lose
+ * the only advantage an honest page has.
+ */
+export function ProofPills() {
+  const facts = [
+    `${CONDITION_COUNT_PUBLIC} conditions, ${CATEGORY_COUNT_PUBLIC} categories`,
+    'Three items a day',
+    `${STAKE_LABEL} on Polygon`,
+    'Commitment returned either way',
+  ];
+
+  return (
+    <ul className="pv-facts">
+      {facts.map((fact) => (
+        <li key={fact} className="pv-fact">
+          {fact}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * The commitment, as terms rather than prose.
+ *
+ * The amount is on the page on purpose. A commitment device that makes you
+ * open the app to find out what it costs has already lost the argument it
+ * is trying to make.
+ */
+export function CommitmentTerms() {
+  const terms: { label: string; value: ReactNode }[] = [
+    { label: 'You commit', value: `${STAKE_LABEL} on Polygon` },
+    {
+      label: 'The window',
+      value: `Check in on ${TARGET_DAYS} days out of ${WINDOW_DAYS}`,
+    },
+    {
+      label: `If you hit ${TARGET_DAYS} of ${WINDOW_DAYS}`,
+      value: 'Your commitment back, plus a fixed reward',
+    },
+    {
+      label: 'If you miss',
+      value: 'Your commitment back in full. Only the reward is dropped.',
+    },
+    {
+      label: 'Your keys',
+      value: 'Stay in Nimiq Pay. Preventah never asks for a seed phrase.',
+    },
+  ];
+
+  return (
+    <dl className="pv-terms">
+      {terms.map((term) => (
+        <div key={term.label} className="pv-term">
+          <dt>{term.label}</dt>
+          <dd>{term.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
 
 export function WhatItIs({ headingAs: H = 'h3' }: { headingAs?: 'h2' | 'h3' }) {
   return (
@@ -70,7 +166,7 @@ const STEPS = [
   },
   {
     title: 'Pick what runs in your family',
-    body: 'Search the catalog, filter by category, select up to fifteen. Each one explains what a family history of it does and does not mean.',
+    body: `Search ${CONDITION_COUNT_PUBLIC} conditions across ${CATEGORY_COUNT_PUBLIC} categories and select up to ${MAX_SELECTIONS_PUBLIC}. Everything comes from the list, and each one explains what a family history of it does and does not mean.`,
   },
   {
     title: 'Get today’s plan',
@@ -317,7 +413,7 @@ export const FAQ_ITEMS: FaqItem[] = [
   },
   {
     q: 'Is the reward a yield or an investment?',
-    a: 'No. It is a fixed, funded rebate for keeping a habit, the same for everyone, set in the code. Nothing about it is random and nothing about it depends on a market.',
+    a: 'No. It is a fixed, funded rebate for keeping a habit: the same percentage for everyone, decided before you commit. Nothing about it is random and nothing about it depends on a market.',
   },
   {
     q: 'Who sees my family history?',
@@ -330,6 +426,10 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     q: 'Does skipping a day mean I lose my money?',
     a: 'No. The target is five days out of seven, so there is room to miss. And even if you miss the target entirely, your commitment comes back in full. Only the reward depends on hitting it.',
+  },
+  {
+    q: 'Can I use it without committing any USDT?',
+    a: 'Yes, more of it than you might expect. Consent, picking what runs in your family, and your daily plan all work with no commitment at all. The commitment adds the part money is actually good at: a streak, and a reason to open the app on the day you would rather not.',
   },
 ];
 

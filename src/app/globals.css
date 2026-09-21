@@ -1245,6 +1245,36 @@ a {
   margin-top: var(--space-6);
 }
 
+/*
+  The facts under the hero CTA.
+
+  Shaped like a chip, but it is a list of claims rather than a set of
+  controls, so it is a ul and never grows a cursor, a hover or a pressed
+  state. Cream on ink keeps it legible on the lavender canvas, where the
+  muted token would not clear AA.
+*/
+.pv-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-5) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pv-fact {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px var(--space-3);
+  border: var(--stroke-thin) solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  line-height: 1.3;
+}
+
 .pv-grid {
   display: grid;
   gap: var(--space-4);
@@ -1843,6 +1873,55 @@ a {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
+}
+
+/*
+  The commitment terms.
+
+  A dl, because that is exactly what it is: term and definition. Each pair
+  is wrapped in a div so the row can be a flex container without breaking
+  the dt/dd association that a screen reader walks.
+
+  It wraps to two lines on a narrow screen rather than shrinking the type,
+  since the right-hand side carries the sentence that matters most.
+*/
+.pv-terms {
+  margin: 0;
+  display: grid;
+  gap: 0;
+}
+
+.pv-term {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+  /* Ink at low alpha rather than a new grey: the rule stays in the palette
+     and keeps working if the sheet colour underneath ever changes. */
+  border-bottom: 1px solid rgb(20 20 20 / 0.14);
+  font-size: var(--text-ui);
+}
+
+.pv-term:first-child {
+  padding-top: 0;
+}
+
+.pv-term:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.pv-term dt {
+  font-weight: 700;
+  color: var(--color-ink);
+}
+
+.pv-term dd {
+  margin: 0;
+  color: var(--color-ink-soft);
+  text-align: right;
+  flex: 1 1 14ch;
 }
 
 .pv-plain-list {
