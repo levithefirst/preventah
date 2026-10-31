@@ -39,6 +39,7 @@ A [Nimiq Pay](https://nimiq.com) Mini App. Pick what runs in your family, get on
 - [Design system](#design-system)
 - [Project layout](#project-layout)
 - [Operating the escrow wallet](#operating-the-escrow-wallet)
+- [Known limitations](#known-limitations)
 - [License](#license)
 
 ---
@@ -103,6 +104,19 @@ The amount applies to **new** commitments only. A running commitment is settled 
 
 ## Architecture
 
+```mermaid
+flowchart TD
+    Pay["Nimiq Pay WebView<br/>window.nimiq, window.ethereum"] --> App["Next.js 16 app<br/>Mini App and public site, /api/*"]
+    App --> DB[("Neon Postgres<br/>consent, selections, measurements,<br/>stakes, check-ins")]
+    Cron["Vercel Cron, daily"] --> Payout["/api/cron/payout"]
+    Payout --> DB
+    App -->|"verify stake receipts"| Polygon["Polygon RPC via viem"]
+    Payout -->|"refund + reward from escrow"| Polygon
+```
+
+<details>
+<summary>Text version</summary>
+
 ```text
 Nimiq Pay (WebView)
   │  window.nimiq     → host handshake, account, language
@@ -118,6 +132,8 @@ Vercel Cron → /api/cron/payout (daily)
   ↓
 Polygon RPC (viem) → verify stake receipts, send refund + reward from escrow
 ```
+
+</details>
 
 ---
 
@@ -337,6 +353,14 @@ The escrow wallet needs enough **USDT** to cover outstanding stakes plus rewards
 The settlement job refuses to broadcast a transfer the escrow cannot cover, marking the stake for retry instead of burning gas on a transaction that would revert. After five failed attempts a stake is parked in `payout_failed` for a human to look at.
 
 ---
+
+## Known limitations
+
+- **Custodial escrow.** While a commitment runs, your USDT sits in a project-controlled wallet, and you are trusting the operator to return it.
+- **Payouts depend on the daily job and the escrow balance.** Refunds and rewards need the Vercel Cron job to run and the escrow to hold enough USDT and POL for gas. A stake that fails five payout attempts is parked in `payout_failed` for a human to review.
+- **Fixed terms.** New commitments are 0.10 USDT on Polygon PoS with a fixed 5% reward, set in code and config.
+- **Built for Nimiq Pay.** Staking and sign-in use Nimiq Pay's injected wallet, and outside it the app shows the public site.
+- **General guidance only.** It is not medical advice and never scores, ranks or predicts anyone's risk.
 
 ## License
 
